@@ -5,7 +5,7 @@
 
 looks exponential! so why do most of our models based on an exponential distribution fail to represent the data? look below by age cat...
 
-```{r hist-full, echo=FALSE}
+```{r hist-full-csss, echo=FALSE}
 ggplot(dat, aes(x = t_c_years, fill = rel2)) +
   geom_histogram(binwidth = 0.5) + 
   scale_x_continuous(name="years", breaks=seq(0,35,5)) + 
@@ -17,7 +17,7 @@ ggplot(dat, aes(x = t_c_years, fill = rel2)) +
 First 3 age cats, the 15-29 year olds (& my pop of interest for modeling purposes), look reasonably exponential. But! Older age categories begin to look surprisingly uniform  
 
 
-```{r histograms, echo=FALSE, out.width='50%'}
+```{r histograms-csss, echo=FALSE, out.width='50%'}
 dat %>% filter(e.agecat %in% "15-19") %>%
   ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
   geom_histogram(binwidth = 0.5) +

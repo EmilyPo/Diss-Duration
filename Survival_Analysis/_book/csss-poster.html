@@ -5,11 +5,11 @@
 
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>Chapter 8 Visualization (old) | NSFG &amp; Event History Analysis</title>
-  <meta name="description" content="Chapter 8 Visualization (old) | NSFG &amp; Event History Analysis">
+  <title>Chapter 9 CSSS Poster | NSFG &amp; Event History Analysis</title>
+  <meta name="description" content="Chapter 9 CSSS Poster | NSFG &amp; Event History Analysis">
   <meta name="generator" content="bookdown  and GitBook 2.6.7">
 
-  <meta property="og:title" content="Chapter 8 Visualization (old) | NSFG &amp; Event History Analysis" />
+  <meta property="og:title" content="Chapter 9 CSSS Poster | NSFG &amp; Event History Analysis" />
   <meta property="og:type" content="book" />
   
   
@@ -17,7 +17,7 @@
   
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Chapter 8 Visualization (old) | NSFG &amp; Event History Analysis" />
+  <meta name="twitter:title" content="Chapter 9 CSSS Poster | NSFG &amp; Event History Analysis" />
   
   
   
@@ -32,8 +32,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   
   
-<link rel="prev" href="race.html">
-<link rel="next" href="csss-poster.html">
+<link rel="prev" href="viz.html">
+<link rel="next" href="references.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -131,56 +131,25 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="viz" class="section level1">
-<h1><span class="header-section-number">Chapter 8</span> Visualization (old)</h1>
-<div id="egos-15-29-unrestricted-alters" class="section level2">
-<h2><span class="header-section-number">8.1</span> Egos 15-29, Unrestricted Alters</h2>
-<p>(blue mean line includes censored obs)</p>
-<p><img src="Survival_Analysis_files/figure-html/rels-all_alters-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/rels-all_alters-2.png" width="672" /><img src="Survival_Analysis_files/figure-html/rels-all_alters-3.png" width="672" /></p>
+<div id="csss-poster" class="section level1">
+<h1><span class="header-section-number">Chapter 9</span> CSSS Poster</h1>
+<div id="histograms" class="section level2">
+<h2><span class="header-section-number">9.1</span> Histograms</h2>
+<div id="full-distribtuion-15-44-year-olds-1" class="section level3">
+<h3><span class="header-section-number">9.1.1</span> Full Distribtuion, 15-44 year olds</h3>
+<p>looks exponential! so why do most of our models based on an exponential distribution fail to represent the data? look below by age cat…</p>
+<p><img src="Survival_Analysis_files/figure-html/hist-full-csss-1.png" width="672" /></p>
 </div>
-<div id="egos-15-29-alters-15-29" class="section level2">
-<h2><span class="header-section-number">8.2</span> Egos 15-29, Alters 15-29</h2>
-<p><img src="Survival_Analysis_files/figure-html/rels-lim_alters-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/rels-lim_alters-2.png" width="672" /><img src="Survival_Analysis_files/figure-html/rels-lim_alters-3.png" width="672" /></p>
+<div id="by-age-category-1" class="section level3">
+<h3><span class="header-section-number">9.1.2</span> By Age Category</h3>
+<p>First 3 age cats, the 15-29 year olds (&amp; my pop of interest for modeling purposes), look reasonably exponential. But! Older age categories begin to look surprisingly uniform</p>
+<p><img src="Survival_Analysis_files/figure-html/histograms-csss-1.png" width="50%" /><img src="Survival_Analysis_files/figure-html/histograms-csss-2.png" width="50%" /><img src="Survival_Analysis_files/figure-html/histograms-csss-3.png" width="50%" /><img src="Survival_Analysis_files/figure-html/histograms-csss-4.png" width="50%" /><img src="Survival_Analysis_files/figure-html/histograms-csss-5.png" width="50%" /><img src="Survival_Analysis_files/figure-html/histograms-csss-6.png" width="50%" /></p>
 </div>
-<div id="proportion-of-alters-within-population-15-29" class="section level2">
-<h2><span class="header-section-number">8.3</span> Proportion of Alters within Population 15-29</h2>
-<table class="table" style="width: auto !important; margin-left: auto; margin-right: auto;">
-<thead>
-<tr>
-<th style="text-align:left;">
-</th>
-<th style="text-align:right;">
-prop
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-15-19
-</td>
-<td style="text-align:right;">
-91.92
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-20-24
-</td>
-<td style="text-align:right;">
-90.93
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-25-29
-</td>
-<td style="text-align:right;">
-67.94
-</td>
-</tr>
-</tbody>
-</table>
+</div>
+<div id="test-graphs" class="section level2">
+<h2><span class="header-section-number">9.2</span> test graphs</h2>
+<p>trying to lay latent models over histograms first make hists unweighted since latent models are unweighted</p>
+<p><img src="Survival_Analysis_files/figure-html/hist-mixexp-full-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/hist-mixexp-full-2.png" width="672" /><img src="Survival_Analysis_files/figure-html/hist-mixexp-full-3.png" width="672" /><img src="Survival_Analysis_files/figure-html/hist-mixexp-full-4.png" width="672" /></p>
 
 </div>
 </div>
@@ -189,8 +158,8 @@ prop
           </div>
         </div>
       </div>
-<a href="race.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-<a href="csss-poster.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+<a href="viz.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="references.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
