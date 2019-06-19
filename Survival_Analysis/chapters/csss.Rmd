@@ -1,0 +1,115 @@
+# CSSS Poster
+
+## Histograms
+### Full Distribtuion, 15-44 year olds
+
+looks exponential! so why do most of our models based on an exponential distribution fail to represent the data? look below by age cat...
+
+```{r hist-full, echo=FALSE}
+ggplot(dat, aes(x = t_c_years, fill = rel2)) +
+  geom_histogram(binwidth = 0.5) + 
+  scale_x_continuous(name="years", breaks=seq(0,35,5)) + 
+  ggtitle("Relationship Age, Full Dataset (Ages 15-44)")
+```
+
+### By Age Category
+
+First 3 age cats, the 15-29 year olds (& my pop of interest for modeling purposes), look reasonably exponential. But! Older age categories begin to look surprisingly uniform  
+
+
+```{r histograms, echo=FALSE, out.width='50%'}
+dat %>% filter(e.agecat %in% "15-19") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+    coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 15-19")
+
+dat %>% filter(e.agecat %in% "20-24") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 20-24")
+
+dat %>% filter(e.agecat %in% "25-29") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 25-29")
+
+
+dat %>% filter(e.agecat %in% "30-34") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 30-34")
+
+dat %>% filter(e.agecat %in% "35-39") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 35-39")
+
+dat %>% filter(e.agecat %in% "40-44") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 40-44")
+
+```
+
+
+## test graphs
+
+trying to lay latent models over histograms 
+first make hists unweighted since latent models are unweighted 
+
+```{r hist-mixexp-full, echo=FALSE}
+
+ggplot(dat, aes(x = t_c_years, fill = rel2)) +
+  geom_histogram(binwidth = 0.5) + 
+  scale_x_continuous(name="years", breaks=seq(0,35,5)) + 
+  ggtitle("Relationship Age, Full Dataset (Ages 15-44)")
+
+durVec <- 0:max(dat$t_c)
+expfull <- invLogit(coef(mixExpFit)[3]) *
+      pexp(q = durVec, exp(coef(mixExpFit)[1]), lower.tail = FALSE) +
+  
+      (1-invLogit(coef(mixExpFit)[3])) *
+      pexp(q = durVec, exp(coef(mixExpFit)[2]), lower.tail = FALSE)
+
+mixexp <- as.data.frame(cbind(durVec, expfull))
+mixexp$durVec <- mixexp$durVec/12
+
+ggplot() +
+  geom_histogram(data = dat, aes(x = t_c_years, fill = rel2), binwidth = 0.5) + 
+  geom_line(data = mixexp, aes(x=durVec, y=expfull*7175)) +
+  scale_x_continuous(name="years", breaks=seq(0,35,5)) +
+  ggtitle("Relationship Age, Full Dataset (Ages 15-44)") 
+
+ggplot() +
+  geom_histogram(data = dat, aes(x = t_c_years, fill = rel2), binwidth = 0.5) + 
+  geom_line(data = mixexp, aes(x=durVec, y=expfull*length(dat$ego))) +
+  scale_x_continuous(name="years", breaks=seq(0,35,5)) +
+  ggtitle("Relationship Age, Full Dataset (Ages 15-44)") 
+
+newdat <- dat[order(dat$t_c_years),]
+
+ggplot() +
+  geom_bar(data = newdat, aes(x = t_c_years, y = ego, fill = rel2), stat="identity") + 
+  #geom_line(data = mixexp, aes(x=durVec, y=expfull*length(dat$ego))) +
+  scale_x_continuous(name="years", breaks=seq(0,35,5)) +
+  ggtitle("Relationship Age, Full Dataset (Ages 15-44)") 
+
+```

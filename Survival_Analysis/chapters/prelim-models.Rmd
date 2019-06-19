@@ -1,0 +1,99 @@
+# Duration Only Models {#dur}
+
+This is essentially what I completed for CSSS 544 - event history analysis final project
+
+Standard method for dissolution model in our ERGMs: homogenous constant hazard (exponential) OR, within-group homogenous constant hazard
+
+Motivating question: Is there evidence of a non-constant hazard in empirical data? 
+
+Method: Compare various covariate-free models with different distributions visually to Modified Kaplan-Meier. 
+
+## Plots 
+```{r load-fits, echo = FALSE}
+expFit <- readRDS(here("model_fits", "nocovs", "exp.rds")) 
+km <- readRDS(here("model_fits", "km", "km-nsfg.rds"))
+km_weighted <- readRDS(here("model_fits", "km", "km-weighted.rds"))
+weibFit <- readRDS(here("model_fits", "nocovs", "weib.rds"))
+gammaFit <- readRDS(here("model_fits", "nocovs", "gamma.rds"))
+mixExpFit <- readRDS(here("model_fits", "mixed", "mix-exp-nsfg.rds"))
+
+# functions
+logit = function(p){
+  log(p/(1-p))
+}
+
+invLogit = function(phi){
+  1/(1+exp(-phi))
+}
+```
+  
+__NOTE: mixed exponential was NOT fit using NSFG survey weights__
+```{r survival-plots, echo = FALSE}
+# full plot
+durVec <- 0:max(dat$t_c)
+
+plot(km_weighted, 
+     conf.int = FALSE,
+     xlab = "t, months", ylab = "S(t)",
+     main="Survival of Relationships"
+)
+rug(dat$t_c, lwd=0.07)
+lines(expFit, col="blue")
+lines(weibFit, col="red")
+lines(gammaFit, col="darkgreen")
+legend(300,1, legend = c("Kaplan-Meier", "Exponential", "Weibull", "Gamma"),
+col = c("black", "blue", "red", "darkgreen"), cex=0.7, lwd=2)
+
+
+# zoomed plot
+plot(km_weighted, 
+     conf.int = FALSE,
+     xlab = "t, months", ylab = "S(t)",
+     xlim = c(0,150),
+     main="Survival of Relationships, Zoomed"
+)
+rug(dat$t_c, lwd=0.07)
+lines(expFit, col="blue")
+lines(weibFit, col="red")
+lines(gammaFit, col="darkgreen")
+legend(100,1, legend = c("Kaplan-Meier", "Exponential", "Weibull", "Gamma"),
+col = c("black", "blue", "red", "darkgreen"), cex=0.7, lwd=2)
+```
+
+Now, show mixed exponential (this fit NOT using survey weights)
+
+Latent components - some rels will be short, some will be longer. Property of relationships, not of egos or alters. This type of model fit best in Kirk's dissertation analysis. 
+
+```{r mix-exp-km, echo=FALSE}
+plot(km, 
+     conf.int = FALSE,
+     xlab = "t, months", ylab = "S(t)",
+     main="Mixed Exponential, No Covs"
+)
+lines(x = durVec,
+      y = invLogit(coef(mixExpFit)[3]) *
+      pexp(q = durVec, exp(coef(mixExpFit)[1]), lower.tail = FALSE) +
+      (1-invLogit(coef(mixExpFit)[3])) *
+      pexp(q = durVec, exp(coef(mixExpFit)[2]), lower.tail = FALSE),
+      col ="purple", lwd=2
+)
+legend(300,1, legend = c("Kaplan-Meier (unweighted)", "Mixed Exp"),
+col = c("black", "purple"), cex=0.7, lwd=2)
+
+```
+
+
+## Model Comparison
+
+
+Model | AIC
+---------- | ---------------------
+Exponential | `r round(AIC(expFit))`
+Weibull | `r round(AIC(weibFit))`
+Gamma | `r round(AIC(gammaFit))`
+Mixed Exp | `r round(AIC(mixExpFit))`
+
+## Limitations / Future Work  
+ - Statistical estimator - Kirk uses Kolmogorov-Smirnov Distance
+ - Random Effects model for serial observations? 
+ - SURVEY WEIGHTS IN MIXED EXP - HOW TO ADD TO LIKELIHOOD FUNCTION?

@@ -1,0 +1,185 @@
+# Histograms {#hist}
+
+setting aside censoring issues, show histograms of relationship age by relationship type 
+
+shows within-group distribution  
+
+using NSFG survey weights so representative of age groups, but pop sizes by age are not exactly equal - so graphs are not a perfect indicator of between-group rates of relationships but does give us a sense of overall activity  
+
+## Full Distribtuion, 15-44 year olds
+
+looks exponential! so why do most of our models based on an exponential distribution fail to represent the data? look below by age cat...
+
+```{r hist-full, echo=FALSE}
+ggplot(dat, aes(x = t_c_years, fill = rel2)) +
+  geom_histogram(binwidth = 0.5) + 
+  scale_x_continuous(name="years", breaks=seq(0,35,5)) + 
+  ggtitle("Relationship Age, Full Dataset (Ages 15-44)")
+```
+
+## By Age Category
+
+First 3 age cats, the 15-29 year olds (& my pop of interest for modeling purposes), look reasonably exponential. But! Older age categories begin to look surprisingly uniform  
+
+
+```{r histograms, echo=FALSE, out.width='50%'}
+dat %>% filter(e.agecat %in% "15-19") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+    coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 15-19")
+
+dat %>% filter(e.agecat %in% "20-24") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 20-24")
+
+dat %>% filter(e.agecat %in% "25-29") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 25-29")
+
+
+dat %>% filter(e.agecat %in% "30-34") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 30-34")
+
+dat %>% filter(e.agecat %in% "35-39") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 35-39")
+
+dat %>% filter(e.agecat %in% "40-44") %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  coord_cartesian(ylim=c(0,1e7)) +
+  scale_fill_discrete(name="Rel Type") + 
+  ggtitle("Ages 40-44")
+
+```
+
+## By Censoring Status 
+
+Steve wanted to see hists by weather a rel was inactive (exact duration) or active on day of interview (current rel age is right-censored)  
+
+
+```{r hists2, echo=FALSE, out.width='50%'}
+other <- "#619CFF"
+spouse <- "#F8766D"
+cohab <- "#00BA38"
+
+dat %>% filter(e.agecat %in% "15-19" & censored==1) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_manual(name="Rel Type", values =c(cohab, other)) + 
+  coord_cartesian(ylim=c(0,5e+06)) +  
+  ggtitle("Ages 15-19, Exact (Inactive)")
+
+dat %>% filter(e.agecat %in% "15-19" & censored==0) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) +  
+  ggtitle("Ages 15-19, Active")
+
+dat %>% filter(e.agecat %in% "20-24" & censored==1) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) +  
+  ggtitle("Ages 20-24, Exact (Inactive)")
+
+dat %>% filter(e.agecat %in% "20-24" & censored==0) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) +  
+  ggtitle("Ages 20-24, Active")
+
+dat %>% filter(e.agecat %in% "25-29" & censored==1) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) +   
+  ggtitle("Ages 25-29, Exact (Inactive)")
+
+dat %>% filter(e.agecat %in% "25-29" & censored==0) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) + 
+  ggtitle("Ages 25-29, Active")
+
+
+dat %>% filter(e.agecat %in% "30-34" & censored==1) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) + 
+  ggtitle("Ages 30-34, Exact (Inactive)")
+
+dat %>% filter(e.agecat %in% "30-34" & censored==0) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) +  
+  ggtitle("Ages 30-34, Active")
+
+dat %>% filter(e.agecat %in% "35-39" & censored==1) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) +   
+  ggtitle("Ages 35-39, Exact (Inactive)")
+
+dat %>% filter(e.agecat %in% "35-39" & censored==0) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) +   
+  ggtitle("Ages 35-39, Active")
+
+dat %>% filter(e.agecat %in% "40-44" & censored==1) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) +   
+  ggtitle("Ages 40-44, Exact (Inactive)")
+
+dat %>% filter(e.agecat %in% "40-44" & censored==0) %>%
+  ggplot(aes(x = t_c_years, fill = rel2, weights = e.weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,40)) +
+  scale_fill_discrete(name="Rel Type") + 
+  coord_cartesian(ylim=c(0,5e+06)) +   
+  ggtitle("Ages 40-44, Active")
+
+```
+

@@ -1,0 +1,158 @@
+# Younger Population {#young}
+
+This section explores models fit to the 15-29 year olds in NSFG, my population of interest to model in chapters 2 & 3 of dissertation. 
+
+Will likely stick to mixture model framework for network model in chapters 2 and 3. 
+
+```{r km-young, echo=FALSE}
+# unweighted, no covs and age cat 
+km_young_unweighted <- readRDS(here("model_fits", "1529", "km-young-unweighted.rds"))
+km_young_agecat_unweighted <- readRDS(here("model_fits", "1529", "km-young_agecat_unweighted.rds"))
+
+# weighted, no covs and age cat 
+km_young_weighted <- readRDS(here("model_fits", "1529", "km-young-weighted.rds"))
+km_young_agecat_weighted <- readRDS(here("model_fits", "1529", "km-young_agecat_weighted.rds"))
+
+maxLength <- length(km_young_weighted$surv)
+
+survsYoung <- as.data.frame(cbind(km_young_weighted$surv, km_young_unweighted$surv, 
+                            c(1:maxLength)))
+colnames(survsYoung) <- c("KMW", "KM", "t")
+
+plot_ly(survsYoung, x = ~t, y = ~KM, name = "Kalplan-Meier", mode = "lines", type = "scatter") %>%
+  add_trace(y = ~KMW, mode = "lines", name = "Weighted Kaplan-Meier",
+            line = list(color="darkred")) %>%
+  layout(title="Kaplan-Meier Comparison")
+```
+
+```{r restrict-data, echo=FALSE}
+
+young.dat <- dat %>% filter(e.age < 30) %>% filter(age < 30)
+
+#############################################################
+# Restrict Data to egos & alters aged 15-29
+#############################################################
+
+# no covs for reference
+exp.young <- readRDS(here("model_fits", "1529","exp.young.rds"))
+weib.young <- readRDS(here("model_fits", "1529", "weib.young.rds"))
+
+# current ego age 
+expYoungCurrAge <- readRDS(here("model_fits", "1529", "expYoungCurrAge.rds"))
+weibYoungCurrAge <- readRDS(here("model_fits", "1529", "weibYoungCurrAge.rds"))
+
+# sqrt age diff 
+expYoungAgeDiff <- readRDS(here("model_fits", "1529", "expYoungAgeDiff.rds"))
+weibYoungAgeDiff <- readRDS(here("model_fits", "1529", "weibYoungAgeDiff.rds"))
+
+# age cat 
+expYoungAgeCat <- readRDS(here("model_fits", "1529", "expYoungAgeCat.rds"))
+weibYoungAgeCat <- readRDS(here("model_fits", "1529", "weibYoungAgeCat.rds"))
+```
+
+```{r exp-young-plots, echo=FALSE}
+plot(exp.young,
+     main="Young Pop, Exponential",
+     ylab="S(t)", xlab="t, months", lwd=3,
+     xlim=c(0, maxLength))
+lines(expYoungAgeDiff, col="springgreen3", lwd=3)
+lines(expYoungCurrAge,col="steelblue3", lwd=3)
+legend(150,1, legend=c("K-M", "No Covs", "Age Diff", "Current Ego Age"),
+       col=c(1, "red", "springgreen3", "steelblue3"), lwd=3)
+
+print("all models have same curve")
+
+plot(weib.young,
+     main="Young Pop, Weibull",
+     ylab="S(t)", xlab="t, months", lwd=3,
+      xlim=c(0, maxLength))
+lines(weibYoungAgeDiff, col="springgreen3", lwd=3)
+lines(weibYoungCurrAge,col="steelblue3", lwd=3)
+legend(150,1, legend=c("K-M", "No Covs", "Age Diff", "Current Ego Age"),
+       col=c(1, "red", "springgreen3", "steelblue3"), lwd=3)
+```
+
+## Latent Mixture Models
+
+__NOTE: these mixture models do NOT use NSFG survey weights__
+
+```{r young-mix-models, echo=FALSE}
+
+durVec <- 0:(maxLength-1)
+
+######################################################
+# mixture model, no covariates
+######################################################
+mixExpYoung <- readRDS(here("model_fits", "1529", "mixExpYoung.rds"))
+
+l1 <- exp(coef(mixExpYoung)[1])
+l2 <- exp(coef(mixExpYoung)[2])
+weight <- invLogit(coef(mixExpYoung)[3])
+
+mixYoung <- weight * pexp(q = durVec, l1, lower.tail = FALSE) +
+            (1-weight) * pexp(q = durVec, l2, lower.tail = FALSE)
+        
+
+######################################################
+# mixture model, lambda weights are variable 
+######################################################
+weightsMixExpyoung <- readRDS(here("model_fits", "1529", "weightsMixExp-young.rds"))
+
+shortDur <- 1/exp(coef(weightsMixExpyoung)[1])
+longDur <- 1/exp(coef(weightsMixExpyoung)[2])
+
+wmix15 <- invLogit(coef(weightsMixExpyoung)[3])
+wmix20 <- invLogit(coef(weightsMixExpyoung)[4])
+wmix25 <- invLogit(coef(weightsMixExpyoung)[5])
+
+durVec <- 0:(maxLength-1)
+
+dfwYoung <- as.data.frame(cbind(
+            durVec, 
+            wmix15 * pexp(q = durVec, exp(coef(weightsMixExpyoung)[1]), lower.tail = FALSE) +
+        (1-wmix15) * pexp(q = durVec, exp(coef(weightsMixExpyoung)[2]), lower.tail = FALSE),
+            wmix20 * pexp(q = durVec, exp(coef(weightsMixExpyoung)[1]), lower.tail = FALSE) +
+        (1-wmix20) * pexp(q = durVec, exp(coef(weightsMixExpyoung)[2]), lower.tail = FALSE), 
+            wmix25 * pexp(q = durVec, exp(coef(weightsMixExpyoung)[1]), lower.tail = FALSE) +
+        (1-wmix25) * pexp(q = durVec, exp(coef(weightsMixExpyoung)[2]), lower.tail = FALSE)))
+
+colnames(dfwYoung) <- c("t", "15-19", "20-24", "25-29")
+
+# weighted average model results 
+p <- young.dat %>% count(e.agecat) %>% mutate(prop = n/sum(n))
+
+dfwYoung$w15 <- as.numeric(rep(p[1,3], length(dfwYoung$t)))
+dfwYoung$w20 <- as.numeric(rep(p[2,3], length(dfwYoung$t)))
+dfwYoung$w25 <- as.numeric(rep(p[3,3], length(dfwYoung$t)))
+
+mix1young <- as.data.frame(cbind(durVec, dfwYoung$`15-19`, dfwYoung$`20-24`, dfwYoung$`25-29`))
+
+avg_wYoung1 <- dfwYoung$`15-19`*dfwYoung$w15 + 
+              dfwYoung$`20-24`*dfwYoung$w20 + 
+              dfwYoung$`25-29`*dfwYoung$w25
+
+######################################################
+# mixture model, lambdas and lambda weights are variable 
+######################################################
+dfwYoung2 <- (df[1:192,1:4])
+avg_wYoung2 <- dfwYoung2$`15-19`*dfwYoung$w15 + 
+               dfwYoung2$`20-24`*dfwYoung$w20 + 
+               dfwYoung2$`25-29`*dfwYoung$w25
+
+#######################################################
+# plots
+#######################################################
+
+# make data frame 
+dfYoung <- as.data.frame(cbind(km_young_unweighted$surv, avg_wYoung1, avg_wYoung2, mixYoung, durVec))
+colnames(dfYoung) <- c("KM", "Mix1", "Mix2" , "NoCovs", "t")
+
+plot_ly(dfYoung, x=~t, y=~KM, type="scatter", mode="lines", name="K-M") %>%
+    add_trace(y=~NoCovs, mode="lines", name = "Mixture, No Covs") %>%
+    add_trace(y=~Mix2, mode="lines", name = "Mixture by AgeCat") %>%
+    layout(title="K-M versus Mixture Models (no survey weights)",
+         yaxis = list(title="S(t)"), 
+         xaxis= list("t, months"))
+```
+
+

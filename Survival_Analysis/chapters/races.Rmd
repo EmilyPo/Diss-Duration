@@ -1,0 +1,26 @@
+# Partner Race {#race}
+
+holy shit I don't think that NSFG asked race of partner for non-active partnerships
+
+among non-active partnerships, men were asked the race of their partner if this non active was their most recent partner, but women were not asked the race for ANY of their non-active parters 
+
+SOME men also have partner race for their 2nd or 3rd non active partner, and a lot of these rels were pretty long so I'm not sure what's going on here 
+
+```{r race_plot, echo=FALSE}
+
+dat %>% count(race) %>% mutate(prop = n/sum(n)) %>% plot_ly(x=~race,y=~n, type="bar") %>%
+            layout(xaxis=list(title="Partner race among all partners"),
+               yaxis=list(title=""))
+
+races <-  dat %>% filter(active==0) %>% group_by(e.sex) %>% count(race) %>%
+              dcast(race~e.sex, value.var = "n")
+
+colnames(races) <- c("race", "Females", "Males")
+
+races %>%
+ plot_ly(x=~race,y=~Females, type="bar", name="Females") %>%
+  add_trace(x=~race, y=~Males, type="bar", name="Males") %>%
+          layout(xaxis=list(title="Partner race among inactive partners"),
+               yaxis=list(title=""))
+
+```

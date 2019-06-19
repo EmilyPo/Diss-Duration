@@ -1,0 +1,27 @@
+# Kirk's Dissertation Approach {#kirk}
+
+__Data__ 
+- KYN  
+- 811 adults from 7 villages in kenya, currently active   partners and dfs/dls with up to 3 partners in last year 
+- similar right censoring and left truncation as NSFG, except extra right censoring for known rels longer than 12 yrs (partnerships began more than 12 yrs ago simply coded as "12+")
+
+__Descriptive__  
+used K-M product limit estimator modified for right censoring and left truncation 
+
+__Estimation Methods__  
+4 models to test: 
+1. homogenous hazard
+2. social dependence - i.e. monogamy / concurrent pref
+3. latent nodal pref for long / short rels
+4. latent partnership type - some will be long some short
+
+parametrically estimated data using exponential dist (using a k-s method and also MLE)
+
+all models simulated using STERGMs, sampled using same approach as KYN data, visually compared to K-M survival curve, and used kolmogorov-smirnov optimization method to estimate GOF to data 
+
+model 4 was also estimated using a mixed exponential (in addition to STERGMs)
+
+model 4 fits data best in this study
+
+note: none of these models test assumption of non-constant hazard among groups. 
+

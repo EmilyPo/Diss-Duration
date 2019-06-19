@@ -1,0 +1,20 @@
+book_filename: "Survival_Analysis"
+delete_merged_file: true
+language:
+  ui:
+    chapter_name: "Chapter "
+
+
+# directory for chapters 
+rmd_subdir: ["chapters"]
+
+# order is specified here
+rmd_files: ["index.Rmd",
+"chapters/descriptives.Rmd",
+"chapters/prelim-models.Rmd",
+"chapters/age-dynamics.Rmd",
+"chapters/young-pop.Rmd",
+"chapters/kirkdiss.Rmd",
+"chapters/races.Rmd",
+"chapters/visualize.Rmd"
+]

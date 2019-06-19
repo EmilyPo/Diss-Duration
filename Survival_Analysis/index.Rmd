@@ -1,0 +1,90 @@
+--- 
+title: "NSFG & Event History Analysis"
+author: "Emily Pollock"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+documentclass: book
+bibliography: [book.bib, packages.bib]
+biblio-style: apalike
+link-citations: yes
+#description: ""
+---
+
+# Introduction {#intro}
+```{r intro-packages, include=FALSE}
+#packages
+library(tidyverse)
+library(kableExtra)
+library(plotly)
+library(reshape2)
+library(maxLik)
+library(survival)
+library(here)
+suppressWarnings(library(ggfortify))
+suppressWarnings(library(flexsurv))
+```
+
+```{r data, include=FALSE}
+dat <- readRDS(here("model_fits", "survdat.rds"))
+```
+
+
+There are `r length(unique(dat$ego))` sexually active respondents in this dataset aged 15-44 who  report on a total of `r count(dat)` sexual partnerships.
+
+Each respondent was asked about their last 3 sexual partnerships that either ended, began, or were active during the last 12 months prior to their interview. 
+
+```{r example_plot, echo=FALSE}
+
+#### data for plots #### 
+
+# observed rels
+examples <- dat[1:75,]
+examples <- examples %>% select(dfs, dls, active) %>% mutate(dfs=-dfs, dls=-dls) %>% mutate(dfs_c = dls, dls_c=-dfs)
+examples$id <- c(1:nrow(examples))
+
+# left truncated rels 
+second <- dat[76:150,] %>% select(dfs, dls, active) %>% mutate(dfs=-dfs, dls=-dls)
+offset <- sample(12:30, 75, replace=T)
+second <- cbind(second,offset)
+second <- second %>% mutate(dfs=dfs-offset, dls=dls-offset)
+second <- second[1:37,]
+second$id <- seq(1,74, by=2)
+
+# right censored rels 
+rights <- examples %>% filter(dls==0 & active==1)
+rights$dls_c <- sample(1:80, nrow(rights), replace=T)
+
+#### plot ####
+plot(x=NA,
+  xlim=c(-350, 60), xaxt='na', xlab=NA,
+  ylim=c(0, 75), yaxt='n', ylab=NA,
+  main = "Example: Known and Unknown Relationships in NSFG"
+)
+# obs window
+abline(v=-12, lty=2)
+abline(v=0, lty=2)
+# observed rels
+segments(
+  x0=examples$dls,
+  x1=examples$dfs,
+  y0=order(examples$id), 
+  col="darkblue"
+)
+# truncated (unobserved) rels 
+segments(
+  x0=second$dls,
+  x1=second$dfs,
+  y0=second$id,
+  col="darkgreen"
+)
+# right-censored examples
+segments(
+  x0=rights$dfs_c,
+  x1=rights$dls_c,
+  y0=rights$id, 
+  col="darkred"
+)
+# legend
+legend(-348, 17, legend = c("Known Durations", "Possible Right Censored Durations", "Possible Unobserved (Truncated) Durations"), 
+       col = c("darkblue", "darkred", "darkgreen"), lwd=2, cex=0.6)
+```

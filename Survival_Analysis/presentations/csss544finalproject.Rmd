@@ -1,0 +1,683 @@
+# CSSS 544 - Final Project
+
+__Question: Assuming no covariate effects, is there evidence of a non-constant hazard for the duration of relationships in the NSFG data?__
+
+__Note:__ Kirk points out that: "the mean of extant partnership ages on the day of interview is considered as an unbiased estimator of the mean of all partnership durations, since both the downwards bias from using censored (incomplete) durations and upwards bias from length bias censoring cancelled out exactly, for proof details, see [Krivitsky et al., 2009]"
+ However, because I am not just working with the active partnerships, I have to control for the left truncation and right censoring
+ 
+
+```{r data}
+dat <- readRDS("~/nsfg_analysis/data/alters_egos.rds")
+
+## remove valid skips, missings, once partners
+dat <- dat[which(dat$active < 2),]
+dat <- dat[which(dat$once==0),]
+
+## new variables
+
+# time
+# t_o = relationship dur at 1 year prior to interview = edge_age_month-12, if edge_age_month-12 is negative, 0
+# t_c = relationship month end (time = 1-12), if still active, 12
+dat$t_o <- ifelse((dat$edge_age_month - 12 >= 0), dat$edge_age_month-12, 0)
+dat$t_c <- dat$edge_age_month
+
+# censoring variable (0 if censored, 1 if exact duration data) (active vs inactive)
+dat$censored <- ifelse(dat$active==1, 0, 1)
+
+# flag for left truncation correction
+dat$truncated <- ifelse(dat$t_o > 0, 1, 0)
+
+# set data up for maxLik package
+x <- dat
+```
+# Example Plot of Known and Unknown Rels based on Sampling Strategy  
+```{r example_plot, echo=FALSE}
+
+#### data for plots #### 
+
+# observed rels
+examples <- dat[1:75,]
+examples <- examples %>% select(dfs, dls, active) %>% mutate(dfs=-dfs, dls=-dls) %>% mutate(dfs_c = dls, dls_c=-dfs)
+examples$id <- c(1:nrow(examples))
+
+# left truncated rels 
+second <- dat[76:150,] %>% select(dfs, dls, active) %>% mutate(dfs=-dfs, dls=-dls)
+offset <- sample(12:30, 75, replace=T)
+second <- cbind(second,offset)
+second <- second %>% mutate(dfs=dfs-offset, dls=dls-offset)
+second <- second[1:37,]
+second$id <- seq(1,74, by=2)
+
+# right censored rels 
+rights <- examples %>% filter(dls==0 & active==1)
+rights$dls_c <- sample(1:80, nrow(rights), replace=T)
+
+#### plot ####
+plot(x=NA,
+  xlim=c(-350, 60), xaxt='na', xlab=NA,
+  ylim=c(0, 75), yaxt='n', ylab=NA,
+  main = "Example: Known and Unknown Relationships in NSFG"
+)
+# obs window
+abline(v=-12, lty=2)
+abline(v=0, lty=2)
+# observed rels
+segments(
+  x0=examples$dls,
+  x1=examples$dfs,
+  y0=order(examples$id), 
+  lty=1, lwd=2
+)
+# truncated (unobserved) rels 
+segments(
+  x0=second$dls,
+  x1=second$dfs,
+  y0=second$id,
+  lty=3, lwd=2
+)
+# right-censored examples
+segments(
+  x0=rights$dfs_c,
+  x1=rights$dls_c,
+  y0=rights$id, 
+  lty=2, lwd=2
+)
+# legend
+legend(-348, 17, legend = c("Known Durations", "Possible Right Censored Durations", "Possible Unobserved (Truncated) Durations"), 
+       lwd=2, lty=c(1:3), cex=0.6)
+```
+# Sidebar: what proportion of respondents report more than one relationship? 
+```{r serials}
+
+# get ego ids for those who report at least 2 
+egos <- dat$ego[which(dat$alter==2)]
+length(egos)
+
+tot <- length(unique(dat$ego))
+
+prop <- length(egos) / tot
+
+```
+`r prop*100`%
+
+
+# Modified Kaplan-Meier Estimator  
+
+```{r k-m}
+km <- survfit(
+  formula = Surv(time = dat$t_o, time2 = dat$t_c, event = dat$censored) ~ 0,
+  error = "greenwood"
+  )
+```
+
+
+# Model Fitting
+
+## Exponential 
+
+```{r exp-ml}
+expML <- function(param){
+  lambda <- param
+  
+  truncated <- x$truncated
+  censored <- x$censored
+  open <- x$t_o
+  closed <- x$t_c
+
+  
+  ifelse(truncated== 0,  # if not truncated 
+      ifelse(censored == 1,  
+             # if exact dur 
+             dexp(closed, lambda, log=TRUE),
+             #if right censored 
+             pexp(closed, lambda, log=TRUE, lower.tail = FALSE)),
+      # if truncated
+        ifelse(censored == 1, 
+               # if exact dur
+               dexp(closed, lambda, log=TRUE)/
+                 pexp(open, lambda, log=TRUE, lower.tail = FALSE), 
+               # if right censored
+               pexp(closed, lambda, log=TRUE, lower.tail = FALSE)/
+                 pexp(open, lambda, log=TRUE, lower.tail = FALSE))
+         )
+}
+
+expMaxLik<- maxLik(logLik = expML,  start=c(scale=1), method="BHHH")
+
+summary(expMaxLik)
+exp(coef(expMaxLik))
+AIC(expMaxLik)
+
+
+```
+
+
+```{r mixed-exp}
+# exponential mixture model of 2 classes of relationship length
+# (similar setup to Model 4 of Kirk's dissertation chapter 2)
+
+# NOTE THAT WE DO NOT USED LOG = TRUE HERE
+# we need to add funcations up first and then log them (see parens)
+
+
+logit = function(p){
+  log(p/(1-p))
+  }
+
+invLogit = function(phi){
+  1/(1+exp(-phi))
+  }
+
+
+mixML <- function(param){
+  logLambda1 = param[1]
+  logLambda2 = param[2]
+  logitWeight1 = param[3]
+  
+  truncated <- x$truncated
+  censored <- x$censored
+  open <- x$t_o
+  closed <- x$t_c
+  
+  
+  ifelse(truncated == 0,
+    ifelse(censored == 1,
+            yes = log(
+              dexp(closed, exp(logLambda1)) * invLogit(logitWeight1) +
+              dexp(closed, exp(logLambda2)) * (1 - invLogit(logitWeight1))
+              ),
+            no = log(
+              pexp(closed, exp(logLambda1), lower.tail = FALSE) * invLogit(logitWeight1) +
+              pexp(closed, exp(logLambda2), lower.tail = FALSE) * (1 - invLogit(logitWeight1))
+              )
+            ),
+    ifelse(censored == 1,
+      yes = log(
+        (dexp(closed, exp(logLambda1)) * invLogit(logitWeight1) +
+        dexp(closed, exp(logLambda2)) * (1 - invLogit(logitWeight1))) / 
+          
+        (pexp(open, exp(logLambda1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pexp(open, exp(logLambda2), lower.tail = FALSE) * (1 - invLogit(logitWeight1)))
+        ),
+      no = log(
+        (pexp(closed, exp(logLambda1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pexp(closed, exp(logLambda2), lower.tail = FALSE) * (1 - invLogit(logitWeight1))) / 
+        
+          (pexp(open, exp(logLambda1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pexp(open, exp(logLambda2), lower.tail = FALSE) * (1 - invLogit(logitWeight1)))
+        )
+      )
+   )
+}
+
+
+mixExpStartParam = c(
+  logLambda1 = log(0.2),
+  logLambda2 = log(0.01),
+  logitWeight1 = logit(0.5)
+  )
+
+mixExpFit = maxLik(
+  logLik = mixML,
+  start = mixExpStartParam,
+  method = "BHHH"
+  )
+
+summary(mixExpFit)
+exp(coef(mixExpFit)[1:2])
+invLogit(coef(mixExpFit)[3])
+AIC(mixExpFit)
+```
+
+## Weibull 
+```{r weib}
+weibML <- function(param){
+  shape <- param[1]
+  scale <- param[2]
+  
+  truncated <- x$truncated
+  censored <- x$censored
+  open <- x$t_o
+  closed <- x$t_c
+  
+  ifelse(truncated== 0,  # if not truncated 
+      ifelse(censored == 1,  
+             # if exact dur 
+             dweibull(closed, shape, scale, log=TRUE),
+             #if right censored 
+             pweibull(closed, shape, scale, log.p=TRUE, lower.tail = FALSE)),
+      # if truncated
+        ifelse(censored == 1, 
+               # if exact dur
+               dweibull(closed, shape, scale, log=TRUE)/
+                 pweibull(open, shape, scale, log.p=TRUE, lower.tail = FALSE), 
+               # if right censored
+               pweibull(closed, shape, scale, log.p=TRUE, lower.tail = FALSE)/
+                 pweibull(open, shape, scale, log.p=TRUE, lower.tail = FALSE))
+         )
+}
+
+weibMaxLik <- maxLik(logLik = weibML,  start=c(shape=1, scale=1), method="BHHH")
+
+summary(weibMaxLik)
+exp(coef(weibMaxLik))
+AIC(weibMaxLik)
+
+```
+
+## Gamma 
+```{r gamma}
+
+gammaML <- function(param){
+  shape <- param[1]
+  scale <- param[2]
+  
+  truncated <- x$truncated
+  censored <- x$censored
+  open <- x$t_o
+  closed <- x$t_c
+  
+  ifelse(truncated== 0,  # if not truncated 
+      ifelse(censored == 1,  
+             # if exact dur 
+             dgamma(closed, shape=shape, scale=scale, log=TRUE),
+             #if right censored 
+             pgamma(closed, shape=shape, scale=scale, log.p=TRUE, lower.tail = FALSE)),
+      # if truncated
+        ifelse(censored == 1, 
+               # if exact dur
+               dgamma(closed, shape=shape, scale=scale, log=TRUE)/
+                 pgamma(open, shape=shape, scale=scale, log.p=TRUE, lower.tail = FALSE), 
+               # if right censored
+               pgamma(closed, shape=shape, scale=scale, log.p=TRUE, lower.tail = FALSE)/
+                pgamma(open, shape=shape, scale=scale, log.p=TRUE, lower.tail = FALSE))
+         )
+}
+
+gammaMaxLik <- maxLik(logLik = gammaML,  start=c(shape=1, scale=1), method="BHHH")
+
+summary(gammaMaxLik)
+exp(coef(gammaMaxLik))
+AIC(gammaMaxLik)
+
+```
+
+```{r plot}
+
+durVec <- 0:max(dat$t_c)
+
+plot(
+  km, conf.int = FALSE,
+  xlab = "t", ylab = "S(t)"
+  )
+rug(dat$t_c, lwd=0.07)
+lines(x = durVec,
+      y = pexp(durVec, coef(expMaxLik), lower.tail = FALSE),
+      col="red")
+#lines(x= durVec,
+#      y=pweibull(durVec, shape=coef(weibMaxLik)[1], scale=coef(weibMaxLik)[2], lower.tail = FALSE), 
+#      col="blue")
+lines(x= durVec,
+      y=pgamma(durVec, shape=coef(gammaMaxLik)[1], scale=coef(gammaMaxLik)[2], lower.tail = FALSE), 
+      col="darkgreen")
+lines(x = durVec,
+      y = invLogit(coef(mixExpFit)[3]) * 
+        pexp(q = durVec, exp(coef(mixExpFit)[1]), lower.tail = FALSE) +
+        (1-invLogit(coef(mixExpFit)[3])) *
+      pexp(q = durVec, exp(coef(mixExpFit)[2]), lower.tail = FALSE),
+  col ="purple"
+  )
+
+legend(300,1, legend = c("Kaplan-Meier", "Exponential", "Mixed Exponential", "Gamma"),
+       col = c("black", "red", "purple", "darkgreen"), cex=0.7, lwd=1)
+
+# black and white plot for poster (and without weibull) 
+plot(
+  km, conf.int = FALSE,
+  xlab = "t", ylab = "S(t)",
+  main = "Relationship Survival in the NSFG", lwd=2)
+rug(dat$t_c, lwd=0.01)
+lines(x = durVec,
+      y = pexp(durVec, coef(expMaxLik), lower.tail = FALSE),
+      lty=2, lwd=2)
+lines(x= durVec,
+      y=pgamma(durVec, shape=coef(gammaMaxLik)[1], scale=coef(gammaMaxLik)[2], lower.tail = FALSE), 
+      lty=4, lwd=2)
+lines(x = durVec,
+      y = invLogit(coef(mixExpFit)[3]) * 
+        pgeom(q = durVec, prob = exp(coef(mixExpFit)[1]), lower.tail = FALSE) +
+        (1-invLogit(coef(mixExpFit)[3])) *
+      pgeom(q = durVec, prob = exp(coef(mixExpFit)[2]), lower.tail = FALSE),
+  lty=3, lwd=2
+  )
+legend(300,1, legend = c("Kaplan-Meier", "Exponential", "Mixed Exponential", "Gamma"),
+       lty = c(1, 2, 3, 4), lwd=2)
+
+# plot zoomed to first 100 months 
+
+#small_vec <- 0:100
+
+#plot(
+#  km, conf.int = FALSE,
+#  xlab = "t", ylab = "S(t)",
+#  xlim=c(1,100), lwd=2
+#  )
+#rug(dat$t_c[1:100], lwd=0.07)
+#lines(x = small_vec,
+#     y = pexp(small_vec, coef(expMaxLik), lower.tail = FALSE),
+#      col="red")
+#lines(x= small_vec,
+#      y=pweibull(small_vec, shape=coef(weibMaxLik)[1], scale=coef(weibMaxLik)[2], lower.tail = FALSE), 
+#      col="blue")
+#lines(x= small_vec,
+#      y=pgamma(small_vec, shape=coef(gammaMaxLik)[1], scale=coef(gammaMaxLik)[2], lower.tail = FALSE), 
+#      col="darkgreen")
+#lines(x = small_vec,
+#      y = invLogit(coef(twoGroupsNexpFit)[3]) * 
+#        pgeom(q = small_vec, prob = exp(coef(twoGroupsNexpFit)[1]), lower.tail = FALSE) +
+#       (1-invLogit(coef(twoGroupsNexpFit)[3])) *
+#      pgeom(q = small_vec, prob = exp(coef(twoGroupsNexpFit)[2]), lower.tail = FALSE),
+# col ="purple")
+
+```
+```{r aic}
+
+
+
+```
+
+# AIC
+Exponential: `r AIC(expMaxLik)`  
+Gamma: `r AIC(gammaMaxLik)`  
+Mixed Exponential: `rAIC(mixExpFit)`  
+
+## Expectations (average rel durs based on each model fit), CIs not calculated
+```{r means}
+Eexp <- 1/coef(expMaxLik)
+Egamma <- coef(gammaMaxLik)[1] * coef(gammaMaxLik)[2]
+Emix <- (1/exp(coef(mixExpFit)[1]))*invLogit(coef(mixExpFit)[3]) + 
+        (1/exp(coef(mixExpFit)[2]))*(1-invLogit(coef(mixExpFit)[3]))
+```
+
+Exponential: `r Eexp` months  
+Gamma: `r Egamma` months  
+Mixed Exponential:  
+- Component 1: `r 1/exp(coef(mixExpFit)[1])` months, `r (invLogit(coef(mixExpFit)[3]))*100`%
+- Component 2: `r 1/exp(coef(mixExpFit)[2])` months
+
+
+__ KNOWN ISSUES__
+
+__K-M CIs:__ hughes et al reccommend a bootstrapping technique or robust variance for CI estimation of left-truncated and right-censored relationship duration data. I do not attempt this here.  
+
+__repeated obvserations per ind__ not dealing with here, `r prop*100`%, and roughly half of those report 3 partners  
+
+__weighting__ no weighting here, can incorporate in to K-M, harder when hand-coding ML for exp and weib, outside of scope of this class project
+
+
+
+# things i tried and failed or don't need
+
+```{r mixed-gamma}
+# THIS DOESN'T WORK, model either runs for ages or fails
+
+mixMLgamma <- function(param){
+  logShape1 = param[1]
+  logScale1 = param[2]
+  logShape2 = param[3]
+  logScale2 = param[4]
+  logitWeight1 = param[5]
+  
+  truncated <- x$truncated
+  censored <- x$censored
+  open <- x$t_o
+  closed <- x$t_c
+  
+  
+  ifelse(truncated == 0,
+    ifelse(censored == 1,
+      yes = log(
+        dgamma(closed, shape=exp(logShape1), scale=exp(logScale1)) * invLogit(logitWeight1) +
+        dgamma(closed, shape=exp(logShape2), scale=exp(logScale2)) * (1 - invLogit(logitWeight1))
+      ),
+      no = log(
+        pgamma(closed, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pgamma(closed, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE) * (1 - invLogit(logitWeight1))
+      )
+    ),
+    ifelse(censored == 1,
+      yes = log(
+        (dgamma(closed, shape=exp(logShape1), scale=exp(logScale1)) * invLogit(logitWeight1) +
+        dgamma(closed, shape=exp(logShape2), scale=exp(logScale2)) * (1 - invLogit(logitWeight1))) / 
+          
+        (pgamma(open, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pgamma(open, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE) * (1 - invLogit(logitWeight1)))
+      ),
+      no = log(
+        (pgamma(closed, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pgamma(closed, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE) * (1 - invLogit(logitWeight1))) / 
+          
+        (pgamma(open, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pgamma(open, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE) * (1 - invLogit(logitWeight1)))
+        )
+      )
+   )
+}
+
+
+mixGammaStartParam = c(
+  logShape1 = log(5),
+  logScale1 = log(2),
+  logShape2 = log(5),
+  logScale2 = log(2),
+  logitWeight1 = logit(0.5)
+  )
+
+#mixGammaFit = maxLik(
+#  logLik = mixMLgamma,
+#  start = mixGammaStartParam,
+#  method = "BHHH"
+#  )
+
+##summary(mixGammaFit)
+#exp(coef(mixGammaFit[1:2]))
+#invLogit(coef(twoGroupsNexpFit)[3])
+#AIC(twoGroupsNexpFit)
+
+```
+
+```{r mixed-gamma_noT}
+# this model fit -- why won't the left truncation version????
+
+mixMLgammanoT <- function(param){
+  logShape1 = param[1]
+  logScale1 = param[2]
+  logShape2 = param[3]
+  logScale2 = param[4]
+  logitWeight1 = param[5]
+  
+  truncated <- x$truncated
+  censored <- x$censored
+  open <- x$t_o
+  closed <- x$t_c
+  
+  
+    ifelse(censored == 1,
+      yes = log(
+        dgamma(closed, shape=exp(logShape1), scale=exp(logScale1)) * invLogit(logitWeight1) +
+        dgamma(closed, shape=exp(logShape2), scale=exp(logScale2)) * (1 - invLogit(logitWeight1))
+      ),
+      no = log(
+        pgamma(closed, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pgamma(closed, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE) * (1 - invLogit(logitWeight1))
+      )
+    )
+}
+
+
+mixGammaStartParam = c(
+  logShape1 = log(5),
+  logScale1 = log(2),
+  logShape2 = log(5),
+  logScale2 = log(2),
+  logitWeight1 = logit(0.5)
+  )
+
+#mixGammaFitnoT = maxLik(
+#  logLik = mixMLgammanoT,
+#  start = mixGammaStartParam,
+#  method = "BHHH"
+#  )
+
+#summary(mixGammaFitnoT)
+#exp(coef(mixGammaFitnoT)[1:4])
+#invLogit(coef(mixGammaFitnoT)[5])
+#AIC(mixGammaFitnoT)
+
+```
+
+```{r mixed-gamma2}
+# this model fit -- why won't the left truncation version????
+
+mixMLgamma2 <- function(param){
+  logShape1 = param[1]
+  logScale1 = param[2]
+  logShape2 = param[3]
+  logScale2 = param[4]
+  logitWeight1 = param[5]
+  
+  truncated <- x$truncated
+  censored <- x$censored
+  open <- x$t_o
+  closed <- x$t_c
+  
+  density <- dgamma(closed, shape=exp(logShape1), scale=exp(logScale1)) * invLogit(logitWeight1) +
+        dgamma(closed, shape=exp(logShape2), scale=exp(logScale2)) * (1 - invLogit(logitWeight1))
+  
+  surv <- pgamma(closed, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pgamma(closed, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE) * (1 - invLogit(logitWeight1))
+  
+  surv_trunc <- pgamma(open, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pgamma(open, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE) * (1 - invLogit(logitWeight1))
+  
+  ifelse(truncated==0,  
+    ifelse(censored == 1,
+      yes = log(density),
+      no = log(surv)
+    ),
+    ifelse(censored == 1,
+      yes = log(
+        (dgamma(closed, shape=exp(logShape1), scale=exp(logScale1))/pgamma(open, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE)) * invLogit(logitWeight1) +
+        (dgamma(closed, shape=exp(logShape2), scale=exp(logScale2))/pgamma(open, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE)) * (1 - invLogit(logitWeight1))
+      ),
+      
+      no = log(
+        (pgamma(closed, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE)/pgamma(open, shape=exp(logShape1), scale=exp(logScale1), lower.tail = FALSE)) * invLogit(logitWeight1) +
+        (pgamma(closed, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE)/pgamma(open, shape=exp(logShape2), scale=exp(logScale2), lower.tail = FALSE)) * (1 - invLogit(logitWeight1))
+      )
+    )
+  )
+}
+
+
+mixGammaStartParam = c(
+  logShape1 = log(5),
+  logScale1 = log(2),
+  logShape2 = log(5),
+  logScale2 = log(2),
+  logitWeight1 = logit(0.5)
+  )
+
+#mixGammaFit2 = maxLik(
+#  logLik = mixMLgamma2,
+#  start = mixGammaStartParam,
+#  method = "BHHH"
+#  )
+
+#summary(mixGammaFit2)
+#exp(coef(mixGammaFit2)[1:4])
+#invLogit(coef(mixGammaFit2)[5])
+#AIC(mixGammaFit2)
+```
+
+```{r weib-notrunc}
+weibMLnoT <- function(param){
+  shape <- param[1]
+  scale <- param[2]
+  
+  censored <- x$censored
+  open <- x$t_o
+  closed <- x$t_c
+  
+      ifelse(censored == 1,  
+             # if exact dur 
+             dweibull(closed, shape, scale, log=TRUE),
+             #if right censored 
+             pweibull(closed, shape, scale, log.p=TRUE, lower.tail = FALSE))
+}
+
+#weibMaxLiknoT <- maxLik(logLik = weibMLnoT,  start=c(shape=1, scale=1), method="BHHH")
+
+#summary(weibMaxLiknoT)
+
+#exp(coef(weibMaxLik))
+#AIC(weibMaxLiknoT)
+
+```
+
+```{r mixed-weib}
+mixMLweib <- function(param){
+  logShape1 = param[1]
+  logScale1 = param[2]
+  logShape2 = param[3]
+  logScale2 = param[4]
+  logitWeight1 = param[5]
+  
+  truncated <- x$truncated
+  censored <- x$censored
+  open <- x$t_o
+  closed <- x$t_c
+  
+  mixD <- dweibull(closed, exp(logShape1), exp(logScale1)) * invLogit(logitWeight1) +
+              dweibull(closed, exp(logShape2), exp(logScale2)) * (1 - invLogit(logitWeight1))
+  
+  mixS <- pweibull(closed, exp(logShape1), exp(logScale1), lower.tail = FALSE) * invLogit(logitWeight1) +
+              pweibull(closed, exp(logShape2), exp(logScale2), lower.tail = FALSE) * (1 - invLogit(logitWeight1))
+  
+  mixStrunc <- pweibull(open, exp(logShape1), exp(logScale1), lower.tail = FALSE) * invLogit(logitWeight1) +
+        pweibull(open, exp(logShape2), exp(logScale2), lower.tail = FALSE) * (1 - invLogit(logitWeight1))
+ 
+ 
+  ifelse(truncated == 0,
+    ifelse(censored == 1,
+            yes = log(mixD),
+            no = log(mixS)
+            ),
+    ifelse(censored == 1,
+      yes = log(mixD) - log(mixStrunc),
+      no = log(mixS) - log(mixStrunc)
+      )
+   )
+}
+
+
+mixWeibStartParam = c(
+  logShape1 = log(0.2), 
+  logScale1 = log(0.01),
+  logShape2 = log(0.2),
+  logScale2 = log(0.01),
+  logitWeight1 = logit(0.5)
+  )
+
+#mixWeibFit = maxLik(
+#  logLik = mixMLweib,
+#  start = mixWeibStartParam,
+#  method = "BHHH"
+#  )
+
+#summary(mixWeibFit)
+#exp(coef(mixExpFit)[1:2])
+#invLogit(coef(mixExpFit)[3])
+#AIC(mixExpFit)
+
+```

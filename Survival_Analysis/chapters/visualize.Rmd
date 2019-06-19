@@ -1,0 +1,90 @@
+# Visualization (old) {#viz}
+
+## Egos 15-29, Unrestricted Alters
+
+(blue mean line includes censored obs)
+
+```{r rels-all_alters, echo=FALSE}
+
+# dls - months ago, most recent sex with ego 
+  # if 0 and active==1, rel is ongoing (& censored)
+# dfs - months ago, first sex with ego 
+
+# new variables - negative of dls & dfs, so interview date == 0
+dat <- dat %>% mutate(beg = -1*dfs, end = -1*dls)
+
+## function to plot relationship ages ##
+# @alters - dataset of each alter (reshaped from original ego dataset)
+# @right - optional, T/F, whether some of the data is right-censored, i.e. ongoing at time of interview (end==0)
+# @avg - optional, mean rel age in sample (must be negative)
+
+durs_plots <- function(dat, right = FALSE, avg = NA, title){
+right <- right 
+
+plot(
+  x = NA,
+  xlim = c(
+    -300,
+    0),
+  ylim = c(1, nrow(dat)),
+  xlab = "Relationship Duration in Months",
+  ylab = NA, yaxt = "n",
+  main=title
+  )
+segments(
+  x0 = dat$beg,
+  x1 = dat$end,
+  y0 = order(dat$ego),
+  lwd = 0.1
+  )
+
+  if (right == TRUE) (
+    points(
+      x = dat$end[dat$end == 0],
+      y = order(dat$ego[dat$end == 0]),
+      pch = 4, col = "red", lwd = 0.01
+    )
+  )
+
+  if (!is.na(avg)) (
+  abline(v = avg, lty = 3, col="blue")
+  )
+
+legend(x = -300, y = nrow(dat), legend = "right-censored", col = "red", pch = 4, cex=0.5)
+}
+
+g1 <- dat %>% filter(e.agecat %in% "15-19"); avg_g1 <- g1 %>% summarize(mean=mean(edge_age_month))
+g2 <- dat %>% filter(e.agecat %in% "20-24"); avg_g2 <- g2 %>% summarize(mean=mean(edge_age_month))
+g3 <- dat %>% filter(e.agecat %in% "25-29"); avg_g3 <- g3 %>% summarize(mean=mean(edge_age_month))
+
+durs_plots(g1, right=T, avg=-avg_g1, title=c("rels among egos 15-19"))
+durs_plots(g2, right=T, avg=-avg_g2, title=c("rels among egos 20-24"))
+durs_plots(g3, right=T, avg=-avg_g3, title=c("rels among egos 25-29"))
+
+```
+
+## Egos 15-29, Alters 15-29
+
+```{r rels-lim_alters, echo=FALSE}
+
+g1_1 <- g1 %>% filter(age > 14) %>% filter(age<30)
+g2_1 <- g2 %>% filter(age > 14) %>% filter(age<30)
+g3_1 <- g3 %>% filter(age > 14) %>% filter(age<30)
+
+durs_plots(g1_1, right=T, avg=-avg_g1, title=c("rels among egos 15-19"))
+durs_plots(g2_1, right=T, avg=-avg_g2, title=c("rels among egos 20-24"))
+durs_plots(g3_1, right=T, avg=-avg_g3, title=c("rels among egos 25-29"))
+```
+
+## Proportion of Alters within Population 15-29
+
+```{r rel_tables, echo=FALSE}
+
+egos15 <- nrow(g1_1)/nrow(g1)
+egos20 <- nrow(g2_1)/nrow(g2)
+egos25 <- nrow(g3_1)/nrow(g3)
+
+prop <- round((c(egos15, egos20, egos25))*100, 2)
+prop <- as.data.frame(prop, row.names = c("15-19", "20-24", "25-29"))
+kable(prop) %>% kable_styling(position="center", full_width = F)
+```
