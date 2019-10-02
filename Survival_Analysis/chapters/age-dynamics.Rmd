@@ -1,242 +1,282 @@
-# Age {#age}
+# Parametric Models
 
-This section explores exponentially distributed models that include age dynamics.  
+```{r load-univariate-models, echo=FALSE}
+# load univariate models
 
-Age dyanmics are particularly important for models of STIs due to the differences in reported diagnoses by age categories. Therefore it is important to represent relationships in these age cats reasonably, as duration and formation influence risk. 
+###### exponential 
+e.race <- readRDS(here("model_fits", "covs", "erace.rds")) 
+e.reltype <- readRDS(here("model_fits", "covs", "ereltype.rds")) 
+e.partsyr <- readRDS(here("model_fits", "covs", "epartsyr.rds"))
+e.network <- readRDS(here("model_fits", "covs", "enetwork.rds"))
+e.agecat <- readRDS(here("model_fits", "age", "expAgeCatCurrent.rds"))
+e.deg <- readRDS(here("model_fits", "covs", "edeg.rds"))
 
-__Age’s effects on relationship duration are complex__  
- - Relationship age at time of interview usually lower for younger people, but due to a combination of ‘churn’ and not being alive long enough to have had decades-long relationships. 
- - Age difference between ego and alter matters, but affect of age difference is likely to vary across the life course. 
- - The effect age of age difference on relationship duration may be different depending on if the male or female is the older partner. 
- - Which age is most important for relationship persistence? Age at beginning of relationship, or current age? 
- - Whose age to model? Ego age? Partner age? Ego age and age difference? 
-
-__Dyadic Complications__  
- - Relationship duration is unlikely to be independent of other relationships each partner may be participating in. 
- - Is there a way to represent this in a parametric regression model, and if not, what are the consequences of assuming independence between relationships? 
-
-Likely other complications. 
-
-## Full Dataset 
-
-### Kaplan-Meier Visuals  
-
-As we see later in this document, models that use current ego age versus those that use initial ego age differ little. Both versions of age are conceptually interesting, but graphs below show by initial age is complicated to understand in this dataset given how the data was collected. 
-
-I think that initial age at rel formation would be more useful for dissolution model in ERGMS b/c you wouldn't have to keep re-calculating dissolution probability when nodes age
-
-```{r km-cats, echo=FALSE}
-# unweighted w/ covs
-km_agecat_initial <- readRDS(here("model_fits", "km", "km-agecat-initial.rds"))
-km_agecat_current <- readRDS(here("model_fits", "km", "km-agecat-current.rds"))
-
-# weighted, with & w/o covs
-km_weighted <- readRDS(here("model_fits",  "km", "km-weighted.rds"))
-km_agecat_weighted <- readRDS(here("model_fits",  "km", "km_ac_weighted.rds"))
-km_i_agecat_weighted <- readRDS(here("model_fits", "km", "km_i_agecat_weighted.rds"))
-
-Survs <- as.data.frame(cbind(km_weighted$surv, km$surv, c(0:363)))
-colnames(Survs) <- c("KMW", "KM", "t")
-
-plot_ly(Survs, x = ~t/12, y = ~KM, name = "Kalplan-Meier", mode = "lines", type = "scatter") %>%
-  add_trace(y = ~KMW, mode = "lines", name = "Weighted Kaplan-Meier",
-            line = list(color="darkred")) %>%
-  layout(title="Kaplan-Meier Comparison",  
-         yaxis = list(title = "S(t)"),
-         xaxis = list (title = "t, years"))
-
-autoplot(km_agecat_weighted, censor=FALSE, conf.int=FALSE,
-     main="K-M Survival Curves by Current AgeCat",
-     ylab="S(t)", xlab="t, months")
-
-autoplot(km_i_agecat_weighted, censor=F,
-     main="Weighted K-M Survival Curves by Initial AgeCat",
-     ylab="S(t)", xlab="months")
+###### weibull 
+w.race <- readRDS(here("model_fits", "covs", "wrace.rds")) 
+w.reltype <- readRDS(here("model_fits", "covs", "wreltype.rds")) 
+w.partsyr <- readRDS(here("model_fits", "covs", "wpartsyr.rds"))
+w.network <- readRDS(here("model_fits", "covs", "wnetwork.rds"))
+w.agecat <- readRDS(here("model_fits", "age", "weibAgeCatCurrent.rds"))
+w.deg <- readRDS(here("model_fits", "covs", "wdeg.rds"))
 
 ```
 
-### Mixed Exp Models by Current AgeCat  
+## Univariate 
 
-Mixture model across whole pop does pretty well but overestimates duration of young rels and underestmates duration of long rels. Let's see if we can do better when each age cat is its own mixture model (2 lambdas and a mixture weight). 
+### Age Category (Current)
+```{r agecat, echo=FALSE, warning=FALSE}
+s <- summary(e.agecat)
+plot(km_agecat_weighted, lty=2, col = c(2:6,"orange"), lwd=2,
+     ylab="S(t)", xlab="Months", 
+     main="Current Age Category, Exponential Dist")
+lines(s$`e.agecat=15-19`$est, type = "lines", col = 2, lwd=1.5)
+lines(s$`e.agecat=20-24`$est, type = "lines", col = 3, lwd=1.5)
+lines(s$`e.agecat=25-29`$est, type = "lines", col = 4, lwd=1.5)
+lines(s$`e.agecat=30-34`$est, type = "lines", col = 5, lwd=1.5)
+lines(s$`e.agecat=35-39`$est, type = "lines", col = 6, lwd=1.5)
+lines(s$`e.agecat=40-44`$est, type = "lines", col = "orange", lwd=1.5)
+legend("topright", lty=c(2,1,1,1,1,1,1,1), lwd=c(rep(2,8)), col=c(1,1,2,3,4,5,6,"orange"), 
+       legend = c("K-M", "Fitted Model", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44"), cex = 0.8, bty="n")
 
-Here I fit 2-component mixture models to each of the age categories and plot them as separate lines. 
+s <- summary(w.agecat)
+plot(km_agecat_weighted, lty=2, col = c(2:6,"orange"), lwd=2,
+     ylab="S(t)", xlab="Months", 
+     main="Current Age Category, Weibull Dist")
+lines(s$`e.agecat=15-19`$est, type = "lines", col = 2, lwd=1.5)
+lines(s$`e.agecat=20-24`$est, type = "lines", col = 3, lwd=1.5)
+lines(s$`e.agecat=25-29`$est, type = "lines", col = 4, lwd=1.5)
+lines(s$`e.agecat=30-34`$est, type = "lines", col = 5, lwd=1.5)
+lines(s$`e.agecat=35-39`$est, type = "lines", col = 6, lwd=1.5)
+lines(s$`e.agecat=40-44`$est, type = "lines", col = "orange", lwd=1.5)
+legend("topright", lty=c(2,rep(1,7)), lwd=c(rep(2,8)), col=c(1,1,2,3,4,5,6,"orange"), 
+       legend = c("K-M", "Fitted Model", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44"), cex = 0.8, bty="n")
+```
 
-Would also like to do this by initial age cat, but haven't done so yet. 
+### Race
 
-__THESE MODELS WERE NOT FITTED USING NSFG SURVEY WEIGHTS__
+```{r race-cov, echo=FALSE}
+plot(e.race, main = "Ego Race, Exp Dist", 
+     col=c("red", "blue", "springgreen3", "orange"), xlab="t, months")
+legend(370, 0.95, legend = c("black", "white", "hisp", "other"), col=c("blue", "red", "springgreen3", "orange"), lwd=2, lty=1, cex=.7)
+plot(w.race, main = "Ego Race, Weibull Dist", 
+     col=c("red", "blue", "springgreen3", "orange"), xlab="t, months")
+legend(370, 0.95, legend = c("black", "white", "hisp", "other"), col=c("blue", "red", "springgreen3", "orange"), lwd=2, lty=1, cex=.7)
+```
 
-```{r mixed-exp-ea, echo=FALSE}
+### Rel Type
+```{r reltype-cov, echo=FALSE}
+plot(e.reltype, main = "Rel Type, Exp Dist", 
+     col=c("red", "blue", "springgreen3"), xlab="t, months")
+legend(370, 1, legend = c("Marriage", "Cohab", "Other"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
 
-# out.width='50%'
+plot(w.reltype, main = "Rel Type, Weibull Dist", 
+     col=c("red", "blue", "springgreen3"), xlab="t, months")
+legend(370, 1, legend = c("Marriage", "Cohab", "Other"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
+```
 
-##### load models #######
-mix1519 <- readRDS(here("model_fits", "mixed", "mix1519.rds"))
-mix2024 <- readRDS(here("model_fits", "mixed", "mix2024.rds"))
-mix2529 <- readRDS(here("model_fits", "mixed", "mix2529.rds"))
-mix3034 <- readRDS(here("model_fits", "mixed", "mix3034.rds"))
-mix3539 <- readRDS(here("model_fits", "mixed", "mix3539.rds"))
-mix4044 <- readRDS(here("model_fits", "mixed", "mix4044.rds"))
+### Network  
+Similar to above, but split into marcoh and other - two of the networks we often split out
+```{r network-cov, echo=FALSE}
+plot(e.network, main = "Network, Exp Dist", 
+     col=c("red", "blue"), xlab="t, months")
+legend(370, 1, legend = c("Mar/Coh", "Other"), col=c("red","blue"), lwd=2, lty=1, cex=.7)
 
-# inverse logit function
-logit = function(p){
-  log(p/(1-p))
-}
+plot(w.network, main = "Network, Weibull Dist", 
+     col=c("red", "blue"), xlab="t, months")
+legend(370, 1, legend = c("Mar/Coh", "Other"), col=c("red","blue"), lwd=2, lty=1, cex=.7)
+```
 
-invLogit = function(phi){
-  1/(1+exp(-phi))
-}
+### Partners in Last Year
 
-###### plot using plotly #######
-durVec <- 0:363
+Note: this was also run with "osnpyr" and "maxospyr" with very little differences (not shown)  
 
-# made data frame of mixed exp outputs
-df <- as.data.frame(cbind(durVec, 
-            invLogit(coef(mix1519)[3]) * pexp(q = durVec, exp(coef(mix1519)[1]), lower.tail = FALSE) +
-        (1-invLogit(coef(mix1519)[3])) * pexp(q = durVec, exp(coef(mix1519)[2]), lower.tail = FALSE),
-            invLogit(coef(mix2024)[3]) * pexp(q = durVec, exp(coef(mix2024)[1]), lower.tail = FALSE) +
-        (1-invLogit(coef(mix2024)[3])) * pexp(q = durVec, exp(coef(mix2024)[2]), lower.tail = FALSE), 
-            invLogit(coef(mix2529)[3]) * pexp(q = durVec, exp(coef(mix2529)[1]), lower.tail = FALSE) +
-        (1-invLogit(coef(mix2529)[3])) * pexp(q = durVec, exp(coef(mix2529)[2]), lower.tail = FALSE),
-            invLogit(coef(mix3034)[3]) * pexp(q = durVec, exp(coef(mix3034)[1]), lower.tail = FALSE) +
-        (1-invLogit(coef(mix3034)[3])) * pexp(q = durVec, exp(coef(mix3034)[2]), lower.tail = FALSE),
-            invLogit(coef(mix3539)[3]) * pexp(q = durVec, exp(coef(mix3539)[1]), lower.tail = FALSE) +
-        (1-invLogit(coef(mix3539)[3])) * pexp(q = durVec, exp(coef(mix3539)[2]), lower.tail = FALSE),
-            invLogit(coef(mix4044)[3]) * pexp(q = durVec, exp(coef(mix4044)[1]), lower.tail = FALSE) +
-        (1-invLogit(coef(mix4044)[3])) * pexp(q = durVec, exp(coef(mix4044)[2]), lower.tail = FALSE)))
-colnames(df) <- c("t", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44")
+```{r partsyr-cov, echo=FALSE}
+plot(e.partsyr, main = "Partners in Last Year, Exp Dist", 
+     col=c("red", "blue", "springgreen3"), xlab="t, months")
+legend(370, 1, legend = c("1", "2", "3+"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
+
+plot(w.partsyr, main = "Partners in Last Year, Weibull Dist", 
+     col=c("red", "blue", "springgreen3"), xlab="t, months")
+legend(370, 1, legend = c("1", "2", "3+"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
+```
+
+### Momentary Degree
+```{r deg-cov, echo=FALSE}
+plot(e.deg, main = "Momentary Degree, Exp Dist",
+     col=2:5, xlab="t, months")
+legend("right", 1, legend = c("0", "1", "2", "3"), col=c(3,2,5,4), lwd=2, lty=1, cex=.7)
+
+plot(w.deg, main = "Momentary Degree, Weibull Dist",
+     col=2:5, xlab="t, months")
+legend("right", 1, legend = c("0", "1", "2", "3"), col=c(3,2,5,4), lwd=2, lty=1, cex=.7)
+```
 
 
-## using plotly 
-plot_ly(df, x = ~t/12, y = ~`15-19`, type='scatter', mode='lines', name="15-19") %>%
-  add_trace(y = ~`20-24`, mode = 'lines', name = "20-24") %>%
-  add_trace(y = ~`25-29`, mode = 'lines', name = "25-29") %>%
-  add_trace(y = ~`30-34`, mode = 'lines', name = "30-34") %>%
-  add_trace(y = ~`35-39`, mode = 'lines', name = "35-39") %>%
-  add_trace(y = ~`40-44`, mode = 'lines', name = "40-44") %>%
-  layout(title = "Surival by AgeCat, Mixed Exponential",
-         yaxis = list(title = "S(t)"),
-         xaxis = list (title = "t, years"))
+### AIC Comparison 
 
-# weighted average model results 
-p <- dat %>% count(e.agecat) %>% mutate(prop = n/sum(n))
+Model | Exp Dist | Weibull 
+------|----------|--------
+No Covs | `r AIC(expFit)` | `r AIC(weibFit)`
+Age Category |  `r AIC(e.agecat)` |  `r AIC(w.agecat)`
+Race | `r AIC(e.race)` | `r AIC(w.race)`
+Rel Type - 3 |  `r AIC(e.reltype)` | `r AIC(w.reltype)`
+Rel Type - 2 | `r AIC(e.network)` | `r AIC(w.network)`
+Parts in Last Year | `r AIC(e.partsyr)` | `r AIC(w.partsyr)`
+Momentary Degree | `r AIC(e.deg)` | `r AIC(w.deg)` 
 
-df$w15 <- as.numeric(rep(p[1,3], length(df$t)))
-df$w20 <- as.numeric(rep(p[2,3], length(df$t)))
-df$w25 <- as.numeric(rep(p[3,3], length(df$t)))
-df$w30 <- as.numeric(rep(p[4,3], length(df$t)))
-df$w35 <- as.numeric(rep(p[5,3], length(df$t)))
-df$w40 <- as.numeric(rep(p[6,3], length(df$t)))
 
-avg <- df$`15-19`*df$w15 + df$`20-24`*df$w20 + df$`25-29`*df$w25 + 
-       df$`30-34`*df$w30 + df$`35-39`*df$w35 + df$`40-44`*df$w40
 
-# compare avg to survival 
-df2 <- as.data.frame(cbind(1:364, km$surv, avg)) 
-colnames(df2) <- c("t", "KM", "MixedExpAvg")
+```{r PAA-plots, echo=FALSE}
 
-plot_ly(df2, x = ~t/12, y = ~KM, mode = 'lines', name = "K-M, unweighted", type='scatter') %>%
-  add_trace(y = ~MixedExpAvg, mode = 'lines', name = "Mixed Exp") %>%
-  layout(title="K-M versus Weighted Average of Mixed Exp Models (no survey weights)",
-         yaxis = list(title="S(t)"), 
-         xaxis= list("t, years"))
+
 
 ```
 
 
-```{r mixexp-table, echo=FALSE}
-rate15_1 <- (1/exp(coef(mix1519)[1]))/12
-rate15_2 <- (1/exp(coef(mix1519)[2]))/12
-weight15 <- invLogit(coef(mix1519)[3])
+## Multivariate  
 
-rate20_1 <- (1/exp(coef(mix2024)[1]))/12
-rate20_2 <- (1/exp(coef(mix2024)[2]))/12
-weight20 <- invLogit(coef(mix2024)[3])
+these plots are messy 
 
-rate25_1 <- (1/exp(coef(mix2529)[1]))/12
-rate25_2 <- (1/exp(coef(mix2529)[2]))/12
-weight25 <- invLogit(coef(mix2529)[3])
+```{r load-multivariate-models, echo=FALSE}
+# load multivariate models
 
-rate30_1 <- (1/exp(coef(mix3034)[1]))/12
-rate30_2 <- (1/exp(coef(mix3034)[2]))/12
-weight30 <- invLogit(coef(mix3034)[3])
+###### exponential 
+e.raceage <- readRDS(here("model_fits", "covs", "eraceage.rds")) 
 
-rate35_1 <- (1/exp(coef(mix3539)[1]))/12
-rate35_2 <- (1/exp(coef(mix3539)[2]))/12
-weight35 <- invLogit(coef(mix3539)[3])
+e.racerels <- readRDS(here("model_fits", "covs", "eracerels.rds"))
+e.agerels <- readRDS(here("model_fits", "covs", "eagerels.rds"))
 
-rate40_1 <- (1/exp(coef(mix4044)[1]))/12
-rate40_2 <- (1/exp(coef(mix4044)[2]))/12
-weight40 <- invLogit(coef(mix4044)[3])
+e.ageparts <- readRDS(here("model_fits", "covs", "eageparts.rds")) 
+e.raceparts <- readRDS(here("model_fits", "covs", "eraceparts.rds")) 
+
+e.agedeg <- readRDS(here("model_fits", "covs", "eagedeg.rds")) 
+e.racedeg <- readRDS(here("model_fits", "covs", "eracedeg.rds"))
+
+e.relparts <- readRDS(here("model_fits", "covs", "erelparts.rds"))
+
+###### weibull 
+w.raceage <- readRDS(here("model_fits", "covs", "wraceage.rds"))
+
+w.racerels <- readRDS(here("model_fits", "covs", "wracerels.rds"))
+w.agerels <- readRDS(here("model_fits", "covs", "wagerels.rds"))
+
+w.ageparts <- readRDS(here("model_fits", "covs", "wageparts.rds")) 
+w.raceparts <- readRDS(here("model_fits", "covs", "wraceparts.rds")) 
+
+w.agedeg <- readRDS(here("model_fits", "covs", "wagedeg.rds")) 
+w.racedeg <- readRDS(here("model_fits", "covs", "wracedeg.rds"))
+
+w.relparts <- readRDS(here("model_fits", "covs", "wrelparts.rds"))
 ```
 
+### Age Cat + Race
+```{r agerace, echo=FALSE}
+plot(e.agerels, main = "Age Cat + Rel Type, Exp Dist", 
+     xlab="t, months")
 
-Age Category | Short Dur | Long Dur | Prop. Short  
----------- | -----------|----------|-------------
-15-19 | `r round(rate15_1,2)` | `r round(rate15_2,2)` | `r round(weight15,2)`
-20-24 | `r round(rate20_1,2)` | `r round(rate20_2,2)` | `r round(weight20,2)`
-25-29 | `r round(rate25_1,2)` | `r round(rate25_2,2)` | `r round(weight25,2)`
-30-34 | `r round(rate30_1,2)` | `r round(rate30_2,2)` | `r round(weight30,2)`
-35-39 | `r round(rate35_1,2)` | `r round(rate35_2,2)` | `r round(weight35,2)`
-40-44 | `r round(rate40_1,2)` | `r round(rate40_2,2)` | `r round(weight40,2)`
+plot(w.agerels, main = "Age Cat + Rel Type, Weibull Dist", 
+     xlab="t, months")
+```
 
-```{r mixExpWeights, echo=FALSE}
+### AgeCat + Rel Type
+```{r agerels, echo=FALSE}
+plot(e.ageparts, main = "Age Cat + Partners in Last Year, Exp Dist", 
+     xlab="t, months")
+#col=c("red", "blue", "springgreen3"), 
+#legend(370, 1, legend = c("Marriage", "Cohab", "Other"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
 
-weightsMixExp <- readRDS(here("model_fits", "mixed", "weightsMixExp.rds"))
-
-shortDur <- 1/exp(coef(weightsMixExp)[1])
-longDur <- 1/exp(coef(weightsMixExp)[2])
-wmix15 <- invLogit(coef(weightsMixExp)[3])
-wmix20 <- invLogit(coef(weightsMixExp)[4])
-wmix25 <- invLogit(coef(weightsMixExp)[5])
-wmix30 <- invLogit(coef(weightsMixExp)[6])
-wmix35 <- invLogit(coef(weightsMixExp)[7])
-wmix40 <- invLogit(coef(weightsMixExp)[8])
-
-dfw <- as.data.frame(cbind(durVec, 
-            wmix15 * pexp(q = durVec, exp(coef(weightsMixExp)[1]), lower.tail = FALSE) +
-        (1-wmix15) * pexp(q = durVec, exp(coef(weightsMixExp)[2]), lower.tail = FALSE),
-            wmix20 * pexp(q = durVec, exp(coef(weightsMixExp)[1]), lower.tail = FALSE) +
-        (1-wmix20) * pexp(q = durVec, exp(coef(weightsMixExp)[2]), lower.tail = FALSE), 
-            wmix25 * pexp(q = durVec, exp(coef(weightsMixExp)[1]), lower.tail = FALSE) +
-        (1-wmix25) * pexp(q = durVec, exp(coef(weightsMixExp)[2]), lower.tail = FALSE),
-            wmix30 * pexp(q = durVec, exp(coef(weightsMixExp)[1]), lower.tail = FALSE) +
-        (1-wmix30) * pexp(q = durVec, exp(coef(weightsMixExp)[2]), lower.tail = FALSE),
-            wmix35 * pexp(q = durVec, exp(coef(weightsMixExp)[1]), lower.tail = FALSE) +
-        (1-wmix35) * pexp(q = durVec, exp(coef(weightsMixExp)[2]), lower.tail = FALSE),
-            wmix40 * pexp(q = durVec, exp(coef(weightsMixExp)[1]), lower.tail = FALSE) +
-        (1-wmix40) * pexp(q = durVec, exp(coef(weightsMixExp)[2]), lower.tail = FALSE)))
-
-colnames(dfw) <- c("t", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44")
-
-# weighted average model results 
-dfw$w15 <- as.numeric(rep(p[1,3], length(dfw$t)))
-dfw$w20 <- as.numeric(rep(p[2,3], length(dfw$t)))
-dfw$w25 <- as.numeric(rep(p[3,3], length(dfw$t)))
-dfw$w30 <- as.numeric(rep(p[4,3], length(dfw$t)))
-dfw$w35 <- as.numeric(rep(p[5,3], length(dfw$t)))
-dfw$w40 <- as.numeric(rep(p[6,3], length(dfw$t)))
-
-avg_w <- dfw$`15-19`*dfw$w15 + dfw$`20-24`*dfw$w20 + dfw$`25-29`*dfw$w25 + 
-       dfw$`30-34`*dfw$w30 + dfw$`35-39`*dfw$w35 + dfw$`40-44`*dfw$w40
-
-# compare avg to survival 
-dfw2 <- as.data.frame(cbind(1:364, km$surv, avg, avg_w))
-
-colnames(dfw2) <- c("t", "KM", "MixedExpAvg", "WeightsMixExp")
-
-plot_ly(dfw2, x = ~t, y = ~KM, mode = 'lines', name = "K-M, unweighted", type='scatter') %>%
-  add_trace(y = ~MixedExpAvg, mode='lines', name="Mixed Exp Avg") %>%
-  add_trace(y = ~WeightsMixExp, mode = 'lines', name = "Weights Mix Exp Avg") %>%
-  layout(title="K-M versus Weighted Average of Mixed Exp Models (no survey weights)",
-         yaxis = list(title="S(t)"), 
-         xaxis= list("t, months"))
+plot(w.ageparts, main = "Age Cat + Partners in Last Year, Weibull Dist", 
+     xlab="t, months")
 
 ```
 
+### Race + Rel Type  
 
-### Covariate Models
+```{r racerels, echo=FALSE}
+plot(e.racerels, main = "Race + Rel Type, Exp Dist", 
+     xlab="t, months")
+     
+plot(w.racerels, main = "Race + Rel Type, Weibull Dist", 
+     xlab="t, months")
+```
 
-note: categorical models not shown here! finding a way to plot better 
+### Age Cat + Partners in Last Year
+
+```{r ageparts, echo=FALSE}
+plot(e.ageparts, main = "Age Cat + Partners in Last Year, Exp Dist", 
+     xlab="t, months")
+#col=c("red", "blue", "springgreen3"), 
+#legend(370, 1, legend = c("Marriage", "Cohab", "Other"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
+
+plot(w.ageparts, main = "Age Cat + Partners in Last Year, Weibull Dist", 
+     xlab="t, months")
+
+```
+
+### Race + Partners in Last Year
+
+```{r raceparts, echo=FALSE}
+plot(e.raceparts, main = "Race + Partners in Last Year, Exp Dist", 
+     xlab="t, months")
+
+plot(w.raceparts, main = "Race + Partners in Last Year, Weibull Dist", 
+     xlab="t, months")
+```
+
+
+### Age Cat + Momentary Degree
+
+```{r agedeg, echo=FALSE}
+plot(e.agedeg, main = "Age Cat + Momentary Degree, Exp Dist", 
+     xlab="t, months")
+
+plot(w.agedeg, main = "Age Cat + Momentary Degree, Weibull Dist", 
+     xlab="t, months")
+
+```
+
+
+### Race + Momentary Degree
+```{r racedeg, echo=FALSE}
+plot(e.racedeg, main = "Race + Momentary Degree, Exp Dist", 
+     xlab="t, months")
+
+plot(w.racedeg, main = "Race + Momentary Degree, Weibull Dist", 
+     xlab="t, months")
+
+```
+
+### Rel Type + Parts Last Year
+
+```{r relparts, echo=FALSE}
+plot(e.relparts, main = "Rel Type + Parts Lst Year, Exp Dist", 
+     xlab="t, months")
+
+plot(w.relparts, main = "Rel Type + Parts Lst Year, Weibull Dist", 
+     xlab="t, months")
+```
+
+
+
+### Model Comparison 
+Model | Exp Dist | Weibull 
+------|----------|--------
+No Covs | `r AIC(expFit)` | `r AIC(weibFit)`
+Age Cat + Race |  `r AIC(e.raceage)` |  `r AIC(w.raceage)`
+Age Cat + Rel Type |  `r AIC(e.agerels)` | `r AIC(w.agerels)`
+Race + Rel Type | `r AIC(e.racerels)` | `r AIC(w.racerels)`
+Age Cat + PartsLstYear | `r AIC(e.ageparts)` | `r AIC(w.ageparts)`
+Race + PartsLastYear | `r AIC(e.raceparts)` | `r AIC(w.raceparts)`
+Age Cat + Degree | `r AIC(e.agedeg)` | `r AIC(w.agedeg)`
+Race + Degree | `r AIC(e.racedeg)` | `r AIC(w.racedeg)`
+Rel Type + PartsLstYear | `r AIC(e.relparts)` | `r AIC(w.relparts)`
+
+
+
+
+
+### Other Age Vars 
+ that don't tell us much 
 
 ```{r full-dataset, echo=FALSE, warnings=FALSE}
 ######## load continuous covariate models ##########
@@ -255,11 +295,6 @@ weibAgeDiff <- readRDS(here("model_fits", "age", "weibAgeDiff.rds"))
 
 expAgeDiff_CurAge <- readRDS(here("model_fits", "age", "expAgeDiff_CurAge.rds"))
 weibAgeDiff_CurAge <- readRDS(here("model_fits", "age", "weibAgeDiff_CurAge.rds"))
-
-##### load categorical covariate models ######
-# age cat
-expAgeCatCurrent <- readRDS(here("model_fits", "age", "expAgeCatCurrent.rds"))
-weibAgeCatCurrent <- readRDS(here("model_fits", "age", "weibAgeCatCurrent.rds"))
 
 expAgeDiffAgeCatCurrent <- readRDS(here("model_fits", "age", "expAgeDiffAgeCatCurrent.rds"))
 weibAgeDiffAgeCatCurrent <- readRDS(here("model_fits", "age", "weibAgeDiffAgeCatCurrent.rds"))
@@ -303,9 +338,6 @@ lines(expEgoAgeInit, col="orange", lwd=3)
 lines(expEgoAgeCurrent, col="steelblue3", lwd=3)
 legend(300, 1, legend = c("K-M", "No Covs", "AgeDiff", "Initial Ego Age", "Current Ego Age"), 
        col = c(1, "red", "springgreen3", "orange", "steelblue3"), lwd=3)
-
-plot(expAgeCatCurrent, main="Exponential, Current Ego Age Category")
-plot(weibAgeCatCurrent, main="Weibull, Current Ego Age Category")
 ```
 
 ```{r weib-plots, echo=FALSE, out.width='50%'}
@@ -343,5 +375,17 @@ legend(300, 1, legend = c("K-M", "No Covs", "AgeDiff", "Initial Ego Age", "Curre
  - has anybody demonstrated a crosswalk between a exponential mixture and a weibull? 
  - theory: why doesn't age have a larger effect?
  - age / period / cohort effects - what would we expect? 
- - review length bias in survival analysis / study design issues
  
+ 
+ __Age’s effects on relationship duration are complex__  
+ - Relationship age at time of interview usually lower for younger people, but due to a combination of ‘churn’ and not being alive long enough to have had decades-long relationships. 
+ - Age difference between ego and alter matters, but affect of age difference is likely to vary across the life course. 
+ - The effect age of age difference on relationship duration may be different depending on if the male or female is the older partner. 
+ - Which age is most important for relationship persistence? Age at beginning of relationship, or current age? 
+ - Whose age to model? Ego age? Partner age? Ego age and age difference? 
+
+__Dyadic Complications__  
+ - Relationship duration is unlikely to be independent of other relationships each partner may be participating in. 
+ - Is there a way to represent this in a parametric regression model, and if not, what are the consequences of assuming independence between relationships? 
+
+Likely other complications. 

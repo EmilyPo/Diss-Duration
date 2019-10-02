@@ -1,0 +1,50 @@
+# Immune Fraction 
+
+immunes are present in the population if and only if : 
+$$p = F(\infty) < 1$$
+
+where $p$ is the proportion of susceptibles and 
+$1-F(\infty)$ is the immune proportion 
+
+the failure rate of the susceptible component is specified by $F_{0}(t)$
+
+the problem in the data is that we don't know which observations are immune - but their presence could be suggested by the KM estimates shown previously (long flat tail of certain groups like married rels)
+
+
+$F$ is the distribution of exact survival times
+$G$ is the distribution of censoring times 
+
+$\tau_{F}$ = maximum duration of exact observations
+$\tau_{G}$ = maximum duration of censored observations
+
+```{r maxTimes, echo=FALSE}
+datE <-  dat %>% filter(censored==1)
+datC <- dat %>% filter(censored==0)
+
+tF <- max(datE$t_c)
+tG <- max(datC$t_c)
+
+Fhead <- head(datE$t_c[order(-datE$t_c)],15)
+Ghead <- head(datC$t_c[order(-datC$t_c)],15)
+
+#how many censored obs are longer than longest exact dur? 
+count <- nrow(datC[which(datC$t_c > tF),])
+
+
+```
+
+$\tau_{F}$ = `r tF`
+$\tau_{G}$ = `r tG`
+
+but, only `r count` censored obs are longer than the longest exact obs. 
+
+15 longest by exact or censored:  
+
+Exact: `r Fhead`  
+Censored: `r Ghead`  
+
+
+this likely means that even if there is a cure fraction, it is very small and unlikely to be meaningful in a statistical model 
+
+
+(also I fit parametric models with a cure fraction and they were not better than the models w/o a cure fraction...see R file on "other" model extensions)

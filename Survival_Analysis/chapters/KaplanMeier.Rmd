@@ -1,0 +1,125 @@
+# Kaplan-Meier Models 
+
+As we see later in this document, models that use current ego age versus those that use initial ego age differ little. Both versions of age are conceptually interesting, but graphs below show by initial age is complicated to understand in this dataset given how the data was collected. 
+
+I think that initial age at rel formation would be more useful for dissolution model in ERGMS b/c you wouldn't have to keep re-calculating dissolution probability when nodes age
+
+### Weighted v Unweighted
+
+just for comparison, from here on out unweighted k-m used with mixture models fit w/o survey weights
+
+```{r km-cats, echo=FALSE}
+#dat <- readRDS("~/NSFG_DATA/Objects/altersegos_survdat.rds")
+
+# unweighted w/ & w/o covs
+km <- readRDS(here("model_fits", "km", "km-nsfg.rds"))
+km_agecat_initial <- readRDS(here("model_fits", "km", "km-agecat-initial.rds"))
+km_agecat_current <- readRDS(here("model_fits", "km", "km-agecat-current.rds"))
+
+# weighted, with & w/o covs
+km_weighted <- readRDS(here("model_fits",  "km", "km-weighted.rds"))
+km_agecat_weighted <- readRDS(here("model_fits",  "km", "km_ac_weighted.rds"))
+cox.agecat <- readRDS(here("model_fits",  "km", "agecat-coxph.rds"))
+km_i_agecat_weighted <- readRDS(here("model_fits", "km", "km_i_agecat_weighted.rds"))
+
+# others of interest
+km_eparts_weighted <- readRDS(here("model_fits", "km", "km_eparts_weighted.rds"))
+partsyr.coxph <- readRDS(here("model_fits",  "km", "partsyr-coxph.rds"))
+
+km_reltype_weighted <- readRDS(here("model_fits", "km", "km_reltype_weighted.rds"))
+reltype.coxph <- readRDS(here("model_fits",  "km", "reltype-coxph.rds"))
+
+km_erace_weighted <- readRDS(here("model_fits", "km", "km_erace_weighted.rds"))
+erace.coxph <- readRDS(here("model_fits",  "km", "erace-coxph.rds"))
+
+km_network_weighted <- readRDS(here("model_fits", "km", "km_network_weighted.rds"))
+network.coxph <- readRDS(here("model_fits",  "km", "network-coxph.rds"))
+
+fits <- list(KMweighted = km_weighted, KM = km)
+ggsurvplot(fits, data=dat, combine=TRUE, ggtheme=theme_gray())
+```
+
+
+### Current AgeCat
+#### Kaplan-Meier
+```{r km-agecat-current, echo=FALSE}
+autoplot(km_agecat_weighted, censor=FALSE, conf.int=FALSE,
+     main="Weighted K-M Survival Curves by Current AgeCat",
+     ylab="S(t)", xlab="t, months")
+```
+
+#### Cox PH 
+```{r coxph-agecat, echo=FALSE, message=FALSE, warning=FALSE}
+ggforest(cox.agecat, data=dat)
+```
+
+```{r km-agecat-initial, echo=FALSE, eval=FALSE, include=FALSE}
+autoplot(km_i_agecat_weighted, censor=F,
+     main="Weighted K-M Survival Curves by Initial AgeCat",
+     ylab="S(t)", xlab="months")
+```
+
+### Relationship Type (e.g. 3 Networks)
+#### Kaplan-Meier  
+```{r reltype, echo=FALSE}
+autoplot(km_reltype_weighted, censor=F, conf.int=FALSE,
+     main="Weighted K-M Survival Curves by Relationship Type",
+     ylab="S(t)", xlab="months")
+```
+
+#### Cox PH  
+```{r coxph-reltype, echo=FALSE, message=FALSE, warning=FALSE}
+ggforest(reltype.coxph, data=dat)
+```
+
+### Networks - 2
+#### Kaplan-Meier  
+```{r network2, echo=FALSE}
+autoplot(km_network_weighted, censor=F, conf.int=FALSE,
+     main="Weighted K-M Survival Curves by 2-Networks",
+     ylab="S(t)", xlab="months")
+```
+
+#### Cox PH  
+```{r coxph-network2, echo=FALSE, message=FALSE, warning=FALSE}
+ggforest(network.coxph, data=dat)
+```
+
+### Number Partners in Last Year 
+topcoded at 3; vaginal sex partners 
+
+#### Kaplan-Meier   
+```{r partsyr3, echo=FALSE}
+autoplot(km_eparts_weighted, censor=F, conf.int=FALSE,
+     main="Weighted K-M Survival Curves by Ego's Partners in Last Year",
+     ylab="S(t)", xlab="months")
+```
+
+#### Cox PH  
+```{r coxph-partsyr, echo=FALSE, message=FALSE, warning=FALSE}
+ggforest(partsyr.coxph, data=dat)
+```
+
+### Race 
+#### Kaplan-Meier  
+```{r km-erace, echo=FALSE}
+autoplot(km_erace_weighted, censor=F, conf.int=FALSE,
+     main="Weighted K-M Survival Curves by Ego's Race",
+     ylab="S(t)", xlab="months")
+```
+
+#### Cox PH  
+```{r coxph-race, echo=FALSE, message=FALSE, warning=FALSE}
+ggforest(erace.coxph, data=dat)
+```
+
+### Thoughts
+
+the plateuing of certain strata (i.e. cur/fmr spouses and those who have only had 1 parter in the last year) suggest an immune/cure fraction or "long-term survivors" - that a proportion of relationships in the data are not at risk of dissolving
+
+the histograms also hint at this - with the marriages becoming seeminly much more uniform than exponential 
+
+SEE SECTION WHERE THIS GOES OUT THE WINDOW 
+
+
+

@@ -11,10 +11,10 @@ rmd_subdir: ["chapters"]
 # order is specified here
 rmd_files: ["index.Rmd",
 "chapters/descriptives.Rmd",
+"chapters/KaplanMeier.Rmd",
 "chapters/prelim-models.Rmd",
 "chapters/age-dynamics.Rmd",
+"chapters/MixtureModels.Rmd",
 "chapters/young-pop.Rmd",
 "chapters/kirkdiss.Rmd",
-"chapters/races.Rmd",
-"chapters/visualize.Rmd"
 ]

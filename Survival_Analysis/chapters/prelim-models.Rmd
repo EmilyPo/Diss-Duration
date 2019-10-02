@@ -11,11 +11,12 @@ Method: Compare various covariate-free models with different distributions visua
 ## Plots 
 ```{r load-fits, echo = FALSE}
 expFit <- readRDS(here("model_fits", "nocovs", "exp.rds")) 
-km <- readRDS(here("model_fits", "km", "km-nsfg.rds"))
-km_weighted <- readRDS(here("model_fits", "km", "km-weighted.rds"))
+#km <- readRDS(here("model_fits", "km", "km-nsfg.rds"))
+#km_weighted <- readRDS(here("model_fits", "km", "km-weighted.rds"))
 weibFit <- readRDS(here("model_fits", "nocovs", "weib.rds"))
 gammaFit <- readRDS(here("model_fits", "nocovs", "gamma.rds"))
 mixExpFit <- readRDS(here("model_fits", "mixed", "mix-exp-nsfg.rds"))
+mixExpFitweighted <- readRDS(here("model_fits", "mixed", "mix-exp-nsfg-weighted.rds"))
 
 # functions
 logit = function(p){
@@ -26,23 +27,27 @@ invLogit = function(phi){
   1/(1+exp(-phi))
 }
 ```
-  
-__NOTE: mixed exponential was NOT fit using NSFG survey weights__
 ```{r survival-plots, echo = FALSE}
 # full plot
-durVec <- 0:max(dat$t_c)
+durVec <- c(1:max(km_weighted$time))
 
 plot(km_weighted, 
      conf.int = FALSE,
      xlab = "t, months", ylab = "S(t)",
      main="Survival of Relationships"
 )
-rug(dat$t_c, lwd=0.07)
-lines(expFit, col="blue")
-lines(weibFit, col="red")
-lines(gammaFit, col="darkgreen")
-legend(300,1, legend = c("Kaplan-Meier", "Exponential", "Weibull", "Gamma"),
-col = c("black", "blue", "red", "darkgreen"), cex=0.7, lwd=2)
+lines(expFit, col="blue", lty=2)
+lines(weibFit, col="red", lwd=2)
+#lines(gammaFit, col="darkgreen")
+lines(x = durVec,
+      y = invLogit(coef(mixExpFitweighted)[3]) *
+      pexp(q = durVec, exp(coef(mixExpFitweighted)[1]), lower.tail = FALSE) +
+      (1-invLogit(coef(mixExpFitweighted)[3])) *
+      pexp(q = durVec, exp(coef(mixExpFitweighted)[2]), lower.tail = FALSE),
+      col ="purple", lwd=2
+)
+legend("topright", legend = c("Kaplan-Meier", "Exponential", "Mixed Exponential", "Weibull"),
+col = c("black", "blue", "purple", "red"), cex=0.7, lwd=2, lty = c(1,2,1,1))
 
 
 # zoomed plot
@@ -52,20 +57,25 @@ plot(km_weighted,
      xlim = c(0,150),
      main="Survival of Relationships, Zoomed"
 )
-rug(dat$t_c, lwd=0.07)
 lines(expFit, col="blue")
 lines(weibFit, col="red")
-lines(gammaFit, col="darkgreen")
-legend(100,1, legend = c("Kaplan-Meier", "Exponential", "Weibull", "Gamma"),
-col = c("black", "blue", "red", "darkgreen"), cex=0.7, lwd=2)
+#lines(gammaFit, col="darkgreen")
+lines(x = durVec,
+      y = invLogit(coef(mixExpFitweighted)[3]) *
+      pexp(q = durVec, exp(coef(mixExpFitweighted)[1]), lower.tail = FALSE) +
+      (1-invLogit(coef(mixExpFitweighted)[3])) *
+      pexp(q = durVec, exp(coef(mixExpFitweighted)[2]), lower.tail = FALSE),
+      col ="purple", lwd=2
+)
+legend("topright", legend = c("Kaplan-Meier", "Exponential", "Mixed Exponential", "Weibull"),
+col = c("black", "blue", "purple", "red"), cex=0.7, lwd=2)
 ```
 
-Now, show mixed exponential (this fit NOT using survey weights)
 
-Latent components - some rels will be short, some will be longer. Property of relationships, not of egos or alters. This type of model fit best in Kirk's dissertation analysis. 
 
-```{r mix-exp-km, echo=FALSE}
-plot(km, 
+
+```{r mix-exp-km, echo=FALSE, include=FALSE}
+plot(km_weighted, 
      conf.int = FALSE,
      xlab = "t, months", ylab = "S(t)",
      main="Mixed Exponential, No Covs"
@@ -91,9 +101,9 @@ Model | AIC
 Exponential | `r round(AIC(expFit))`
 Weibull | `r round(AIC(weibFit))`
 Gamma | `r round(AIC(gammaFit))`
-Mixed Exp | `r round(AIC(mixExpFit))`
+
 
 ## Limitations / Future Work  
  - Statistical estimator - Kirk uses Kolmogorov-Smirnov Distance
  - Random Effects model for serial observations? 
- - SURVEY WEIGHTS IN MIXED EXP - HOW TO ADD TO LIKELIHOOD FUNCTION?
+    is this necessary? In Burington et al. proposed modified K-M, partner subsampling is only addressed in the way they calculate the CIs (using a boostrapping technique that I haven't employed yet) If the reference K-M considers all rels as independent, then shouldn't my exploratory models? 

@@ -3,82 +3,225 @@
 This section explores models fit to the 15-29 year olds in NSFG, my population of interest to model in chapters 2 & 3 of dissertation. 
 
 Will likely stick to mixture model framework for network model in chapters 2 and 3. 
+```{r load-young-data, echo=FALSE}
+##### kaplan-meier ######
+# no covs 
+km_unweighted <- readRDS(here("model_fits","1529", "km-unweighted.rds"))
+km_weighted <- readRDS(here("model_fits", "1529", "km-weighted.rds"))
+# covs
+km_ac <- readRDS(here("model_fits","1529", "km_ac_weighted.rds"))
+km_iac <- readRDS(here("model_fits","1529", "km_i_agecat_weighted.rds"))
+km_reltype <- readRDS(here("model_fits","1529", "km_reltype_weighted.rds"))
+km_partsyr <- readRDS(here("model_fits","1529", "km_eparts_weighted.rds"))
+km_race <- readRDS(here("model_fits","1529", "km_erace_weighted.rds"))
 
-```{r km-young, echo=FALSE}
-# unweighted, no covs and age cat 
-km_young_unweighted <- readRDS(here("model_fits", "1529", "km-young-unweighted.rds"))
-km_young_agecat_unweighted <- readRDS(here("model_fits", "1529", "km-young_agecat_unweighted.rds"))
 
-# weighted, no covs and age cat 
-km_young_weighted <- readRDS(here("model_fits", "1529", "km-young-weighted.rds"))
-km_young_agecat_weighted <- readRDS(here("model_fits", "1529", "km-young_agecat_weighted.rds"))
-
-maxLength <- length(km_young_weighted$surv)
-
-survsYoung <- as.data.frame(cbind(km_young_weighted$surv, km_young_unweighted$surv, 
-                            c(1:maxLength)))
-colnames(survsYoung) <- c("KMW", "KM", "t")
-
-plot_ly(survsYoung, x = ~t, y = ~KM, name = "Kalplan-Meier", mode = "lines", type = "scatter") %>%
-  add_trace(y = ~KMW, mode = "lines", name = "Weighted Kaplan-Meier",
-            line = list(color="darkred")) %>%
-  layout(title="Kaplan-Meier Comparison")
-```
-
-```{r restrict-data, echo=FALSE}
-
-young.dat <- dat %>% filter(e.age < 30) %>% filter(age < 30)
-
-#############################################################
-# Restrict Data to egos & alters aged 15-29
-#############################################################
-
+####### Parametric 
 # no covs for reference
-exp.young <- readRDS(here("model_fits", "1529","exp.young.rds"))
-weib.young <- readRDS(here("model_fits", "1529", "weib.young.rds"))
+exp.young <- readRDS(here("model_fits", "1529","expFlex.rds"))
+weib.young <- readRDS(here("model_fits", "1529", "weibFlex.rds"))
+# mix.exp.young 
 
-# current ego age 
-expYoungCurrAge <- readRDS(here("model_fits", "1529", "expYoungCurrAge.rds"))
-weibYoungCurrAge <- readRDS(here("model_fits", "1529", "weibYoungCurrAge.rds"))
+# same covs as full data set 
+# univariate 
+###### exponential 
+e.race <- readRDS(here("model_fits", "1529", "erace.rds")) 
+e.reltype <- readRDS(here("model_fits", "1529", "ereltype.rds")) 
+e.partsyr <- readRDS(here("model_fits", "1529", "epartsyr.rds"))
+e.network <- readRDS(here("model_fits", "1529", "enetwork.rds"))
+e.agecat <- readRDS(here("model_fits", "1529", "eagecat.rds"))
 
-# sqrt age diff 
-expYoungAgeDiff <- readRDS(here("model_fits", "1529", "expYoungAgeDiff.rds"))
-weibYoungAgeDiff <- readRDS(here("model_fits", "1529", "weibYoungAgeDiff.rds"))
+###### weibull 
+w.race <- readRDS(here("model_fits", "1529", "wrace.rds")) 
+w.reltype <- readRDS(here("model_fits", "1529", "wreltype.rds")) 
+w.partsyr <- readRDS(here("model_fits", "1529", "wpartsyr.rds"))
+w.network <- readRDS(here("model_fits", "1529", "wnetwork.rds"))
+w.agecat <- readRDS(here("model_fits", "1529", "wagecat.rds"))
 
-# age cat 
-expYoungAgeCat <- readRDS(here("model_fits", "1529", "expYoungAgeCat.rds"))
-weibYoungAgeCat <- readRDS(here("model_fits", "1529", "weibYoungAgeCat.rds"))
+
+# multivariate 
+###### exponential 
+e.raceage <- readRDS(here("model_fits", "1529", "eraceage.rds")) 
+
+e.racerels <- readRDS(here("model_fits", "1529", "eracerels.rds"))
+e.agerels <- readRDS(here("model_fits", "1529", "eagerels.rds"))
+
+e.ageparts <- readRDS(here("model_fits", "1529", "eageparts.rds")) 
+e.raceparts <- readRDS(here("model_fits", "1529", "eraceparts.rds")) 
+
+e.agedeg <- readRDS(here("model_fits", "1529", "eagedeg.rds")) 
+e.racedeg <- readRDS(here("model_fits", "1529", "eracedeg.rds"))
+
+e.relparts <- readRDS(here("model_fits", "1529", "erelparts.rds"))
+
+###### weibull 
+w.raceage <- readRDS(here("model_fits", "1529", "wraceage.rds"))
+
+w.racerels <- readRDS(here("model_fits", "1529", "wracerels.rds"))
+w.agerels <- readRDS(here("model_fits", "1529", "wagerels.rds"))
+
+w.ageparts <- readRDS(here("model_fits", "1529", "wageparts.rds")) 
+w.raceparts <- readRDS(here("model_fits", "1529", "wraceparts.rds")) 
+
+#w.agedeg <- readRDS(here("model_fits", "1529", "wagedeg.rds")) 
+w.racedeg <- readRDS(here("model_fits", "1529", "wracedeg.rds"))
+
+w.relparts <- readRDS(here("model_fits", "1529", "wrelparts.rds"))
 ```
 
-```{r exp-young-plots, echo=FALSE}
-plot(exp.young,
-     main="Young Pop, Exponential",
-     ylab="S(t)", xlab="t, months", lwd=3,
-     xlim=c(0, maxLength))
-lines(expYoungAgeDiff, col="springgreen3", lwd=3)
-lines(expYoungCurrAge,col="steelblue3", lwd=3)
-legend(150,1, legend=c("K-M", "No Covs", "Age Diff", "Current Ego Age"),
-       col=c(1, "red", "springgreen3", "steelblue3"), lwd=3)
+## Kaplan-Meier Descriptives
+```{r km-young, echo=FALSE}
+durVec <- c(1:max(km_weighted$time))
 
-print("all models have same curve")
-
-plot(weib.young,
-     main="Young Pop, Weibull",
-     ylab="S(t)", xlab="t, months", lwd=3,
-      xlim=c(0, maxLength))
-lines(weibYoungAgeDiff, col="springgreen3", lwd=3)
-lines(weibYoungCurrAge,col="steelblue3", lwd=3)
-legend(150,1, legend=c("K-M", "No Covs", "Age Diff", "Current Ego Age"),
-       col=c(1, "red", "springgreen3", "steelblue3"), lwd=3)
+fits <- list(KMweighted = km_weighted, KM = km_unweighted)
+ggsurvplot(fits, data=dat, combine=TRUE, ggtheme=theme_gray())
 ```
+
+
+### Current AgeCat
+```{r km-agecat-current-young, echo=FALSE}
+autoplot(km_ac, censor=FALSE, conf.int=FALSE,
+     main="Weighted K-M Survival Curves by Current AgeCat",
+     ylab="S(t)", xlab="t, months")
+```
+
+### Initial AgeCat
+```{r km-agecat-initial-young, echo=FALSE}
+autoplot(km_iac, censor=F,
+     main="Weighted K-M Survival Curves by Initial AgeCat",
+     ylab="S(t)", xlab="months")
+```
+
+### Relationship Type
+```{r reltype-young, echo=FALSE}
+autoplot(km_reltype, censor=F, conf.int=FALSE,
+     main="Weighted K-M Survival Curves by Relationship Type",
+     ylab="S(t)", xlab="months")
+```
+
+### Number Partners in Last Year 
+topcoded at 3; vaginal sex partners 
+
+```{r partsyr3-young, echo=FALSE}
+autoplot(km_partsyr, censor=F, conf.int=FALSE,
+     main="Weighted K-M Survival Curves by Ego's Partners in Last Year",
+     ylab="S(t)", xlab="months")
+```
+
+### Race 
+```{r km-erace-young, echo=FALSE}
+autoplot(km_race, censor=F, conf.int=FALSE,
+     main="Weighted K-M Survival Curves by Ego's Race",
+     ylab="S(t)", xlab="months")
+```
+
+## Parametric Models
+
+### Age Category (Current)
+```{r agecat-young, echo=FALSE, warning=FALSE}
+s <- summary(e.agecat)
+plot(km_ac, lty=2, col = c(2:6,"orange"), lwd=2,
+     ylab="S(t)", xlab="Months", 
+     main="Current Age Category, Exponential Dist")
+lines(s$`e.agecat=15-19`$est, type = "lines", col = 2, lwd=1.5)
+lines(s$`e.agecat=20-24`$est, type = "lines", col = 3, lwd=1.5)
+lines(s$`e.agecat=25-29`$est, type = "lines", col = 4, lwd=1.5)
+legend("topright", lty=c(2,1,1,1,1), lwd=c(rep(2,5)), col=c(1,1,2,3,4), 
+       legend = c("K-M", "Fitted Model", "15-19", "20-24", "25-29"), cex = 0.8, bty="n")
+
+s <- summary(w.agecat)
+plot(km_ac, lty=2, col = c(2:6,"orange"), lwd=2,
+     ylab="S(t)", xlab="Months", 
+     main="Current Age Category, Weibull Dist")
+lines(s$`e.agecat=15-19`$est, type = "lines", col = 2, lwd=1.5)
+lines(s$`e.agecat=20-24`$est, type = "lines", col = 3, lwd=1.5)
+lines(s$`e.agecat=25-29`$est, type = "lines", col = 4, lwd=1.5)
+legend("topright", lty=c(2,rep(1,4)), lwd=c(rep(2,8)), col=c(1,1,2,3,4), 
+       legend = c("K-M", "Fitted Model", "15-19", "20-24", "25-29"), cex = 0.8, bty="n")
+```
+
+### Race
+
+```{r race-cov-young, echo=FALSE}
+plot(e.race, main = "Ego Race, Exp Dist", 
+     col=c("red", "blue", "springgreen3", "orange"), xlab="t, months")
+legend(370, 0.95, legend = c("black", "white", "hisp", "other"), col=c("blue", "red", "springgreen3", "orange"), lwd=2, lty=1, cex=.7)
+plot(w.race, main = "Ego Race, Weibull Dist", 
+     col=c("red", "blue", "springgreen3", "orange"), xlab="t, months")
+legend(370, 0.95, legend = c("black", "white", "hisp", "other"), col=c("blue", "red", "springgreen3", "orange"), lwd=2, lty=1, cex=.7)
+```
+
+### Rel Type
+```{r reltype-cov-young, echo=FALSE}
+plot(e.reltype, main = "Rel Type, Exp Dist", 
+     col=c("red", "blue", "springgreen3"), xlab="t, months")
+legend(370, 1, legend = c("Marriage", "Cohab", "Other"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
+
+plot(w.reltype, main = "Rel Type, Weibull Dist", 
+     col=c("red", "blue", "springgreen3"), xlab="t, months")
+legend(370, 1, legend = c("Marriage", "Cohab", "Other"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
+```
+
+### Network  
+Similar to above, but split into marcoh and other - two of the networks we often split out
+```{r network-cov-young, echo=FALSE}
+plot(e.network, main = "Network, Exp Dist", 
+     col=c("red", "blue"), xlab="t, months")
+legend(370, 1, legend = c("Mar/Coh", "Other"), col=c("red","blue"), lwd=2, lty=1, cex=.7)
+
+plot(w.network, main = "Network, Weibull Dist", 
+     col=c("red", "blue"), xlab="t, months")
+legend(370, 1, legend = c("Mar/Coh", "Other"), col=c("red","blue"), lwd=2, lty=1, cex=.7)
+```
+
+### Partners in Last Year
+
+Note: this was also run with "osnpyr" and "maxospyr" with very little differences (not shown)  
+
+```{r partsyr-cov-young, echo=FALSE}
+plot(e.partsyr, main = "Partners in Last Year, Exp Dist", 
+     col=c("red", "blue", "springgreen3"), xlab="t, months")
+legend(370, 1, legend = c("1", "2", "3+"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
+
+plot(w.partsyr, main = "Partners in Last Year, Weibull Dist", 
+     col=c("red", "blue", "springgreen3"), xlab="t, months")
+legend(370, 1, legend = c("1", "2", "3+"), col=c("red", "springgreen3", "blue"), lwd=2, lty=1, cex=.7)
+```
+
+### Momentary Degree
+```{r deg-cov-young, echo=FALSE}
+plot(e.deg, main = "Momentary Degree, Exp Dist",
+     col=2:5, xlab="t, months")
+legend("right", 1, legend = c("0", "1", "2", "3"), col=c(3,2,5,4), lwd=2, lty=1, cex=.7)
+
+plot(w.deg, main = "Momentary Degree, Weibull Dist",
+     col=2:5, xlab="t, months")
+legend("right", 1, legend = c("0", "1", "2", "3"), col=c(3,2,5,4), lwd=2, lty=1, cex=.7)
+```
+
+
+### AIC Comparison 
+
+Model | Exp Dist | Weibull 
+------|----------|--------
+No Covs | `r AIC(expFit)` | `r AIC(weibFit)`
+Age Category |  `r AIC(e.agecat)` |  `r AIC(w.agecat)`
+Race | `r AIC(e.race)` | `r AIC(w.race)`
+Rel Type - 3 |  `r AIC(e.reltype)` | `r AIC(w.reltype)`
+Rel Type - 2 | `r AIC(e.network)` | `r AIC(w.network)`
+Parts in Last Year | `r AIC(e.partsyr)` | `r AIC(w.partsyr)`
+Momentary Degree | `r AIC(e.deg)` | `r AIC(w.deg)` 
+
+
+
 
 ## Latent Mixture Models
 
 __NOTE: these mixture models do NOT use NSFG survey weights__
 
-```{r young-mix-models, echo=FALSE}
+```{r young-mix-models, echo=FALSE, eval=FALSE}
 
-durVec <- 0:(maxLength-1)
+durVec <- 1:max(km_weighted$time)
 
 ######################################################
 # mixture model, no covariates
@@ -105,7 +248,6 @@ wmix15 <- invLogit(coef(weightsMixExpyoung)[3])
 wmix20 <- invLogit(coef(weightsMixExpyoung)[4])
 wmix25 <- invLogit(coef(weightsMixExpyoung)[5])
 
-durVec <- 0:(maxLength-1)
 
 dfwYoung <- as.data.frame(cbind(
             durVec, 
@@ -119,7 +261,7 @@ dfwYoung <- as.data.frame(cbind(
 colnames(dfwYoung) <- c("t", "15-19", "20-24", "25-29")
 
 # weighted average model results 
-p <- young.dat %>% count(e.agecat) %>% mutate(prop = n/sum(n))
+p <- dat %>% count(e.agecat) %>% mutate(prop = n/sum(n))
 
 dfwYoung$w15 <- as.numeric(rep(p[1,3], length(dfwYoung$t)))
 dfwYoung$w20 <- as.numeric(rep(p[2,3], length(dfwYoung$t)))
@@ -144,7 +286,7 @@ avg_wYoung2 <- dfwYoung2$`15-19`*dfwYoung$w15 +
 #######################################################
 
 # make data frame 
-dfYoung <- as.data.frame(cbind(km_young_unweighted$surv, avg_wYoung1, avg_wYoung2, mixYoung, durVec))
+dfYoung <- as.data.frame(cbind(km_unweighted$surv, avg_wYoung1, avg_wYoung2, mixYoung, durVec))
 colnames(dfYoung) <- c("KM", "Mix1", "Mix2" , "NoCovs", "t")
 
 plot_ly(dfYoung, x=~t, y=~KM, type="scatter", mode="lines", name="K-M") %>%
@@ -155,4 +297,42 @@ plot_ly(dfYoung, x=~t, y=~KM, type="scatter", mode="lines", name="K-M") %>%
          xaxis= list("t, months"))
 ```
 
+## Other 
 
+
+```{r exp-young-plots-other, echo=FALSE}
+####### load other age models ##############
+# current ego age 
+expYoungCurrAge <- readRDS(here("model_fits", "1529", "old", "expYoungCurrAge.rds"))
+weibYoungCurrAge <- readRDS(here("model_fits", "1529", "old", "weibYoungCurrAge.rds"))
+
+# sqrt age diff 
+expYoungAgeDiff <- readRDS(here("model_fits", "1529", "old", "expYoungAgeDiff.rds"))
+weibYoungAgeDiff <- readRDS(here("model_fits", "1529", "old", "weibYoungAgeDiff.rds"))
+
+# age cat 
+expYoungAgeCat <- readRDS(here("model_fits", "1529", "old", "expYoungAgeCat.rds"))
+weibYoungAgeCat <- readRDS(here("model_fits", "1529", "old", "weibYoungAgeCat.rds"))
+
+maxLength <- 
+##### plot 
+plot(exp.young,
+     main="Young Pop, Exponential",
+     ylab="S(t)", xlab="t, months", lwd=3,
+     xlim=c(0, 250))
+lines(expYoungAgeDiff, col="springgreen3", lwd=3)
+lines(expYoungCurrAge,col="steelblue3", lwd=3)
+legend(150,1, legend=c("K-M", "No Covs", "Age Diff", "Current Ego Age"),
+       col=c(1, "red", "springgreen3", "steelblue3"), lwd=3)
+
+print("all models have same curve")
+
+plot(weib.young,
+     main="Young Pop, Weibull",
+     ylab="S(t)", xlab="t, months", lwd=3,
+      xlim=c(0, 250))
+lines(weibYoungAgeDiff, col="springgreen3", lwd=3)
+lines(weibYoungCurrAge,col="steelblue3", lwd=3)
+legend(150,1, legend=c("K-M", "No Covs", "Age Diff", "Current Ego Age"),
+       col=c(1, "red", "springgreen3", "steelblue3"), lwd=3)
+```

@@ -10,53 +10,270 @@ library(survival)
 library(maxLik)
 
 #### Load data ####
-dat <- readRDS(here("model_fits", "survdat.rds"))
-young.dat <- dat %>% filter(e.age < 30) %>% filter(age < 30)
-x <- young.dat
+dat <- readRDS("~/NSFG_DATA/Objects/altersegos_survdat.rds")
+dat <- dat %>%
+  filter(e.age < 30) %>% 
+  filter(age < 30) %>%
+  mutate(e.race = as.factor(e.race),
+         reltype = as.factor(reltype),
+         e.partsyr3 = as.factor(e.partsyr3),
+         e.osnpyr3 = as.factor(e.osnpyr3),
+         e.maxospyr3 = as.factor(e.maxospyr3), 
+         network1 = as.factor(network1), 
+         e.agecat = as.factor(e.agecat),
+         e.agecat.initial = as.factor(e.agecat.initial),
+         e.deg.main = as.factor(e.deg.main))  
 
-#### kaplan-meier ######
-km.young.unweighted <- survfit(
+x <- dat
+
+#### K-Ms ############################
+
+## no covariates
+km_weighted <- survfit(
   formula = Surv(time = t_o, time2 = t_c, event = censored) ~ 1,
-  data = young.dat,
+  weights = e.weight,
+  data = dat,
   error = "greenwood"
 )
 
-km.young.weighted <- survfit(
+saveRDS(km_weighted, "model_fits/1529/km-weighted.rds")
+
+km_unweighted <- survfit(
   formula = Surv(time = t_o, time2 = t_c, event = censored) ~ 1,
-  data = young.dat, weights = e.weight,
+  data = dat,
   error = "greenwood"
 )
+
+saveRDS(km_unweighted, "model_fits/1529/km-unweighted.rds")
 
 ## current ego age category
-km.young_agecat_unweighted <- survfit(
-  formula = Surv(time = t_o, time2 = t_c, event = censored) ~ e.agecat,
-  data = young.dat,
-  error = "greenwood"
-)
-
-km.young_agecat_weighted <- survfit(
+km_agecat_weighted <- survfit(
   formula = Surv(time = t_o, time2 = t_c, event = censored) ~ e.agecat,
   weights = e.weight,
-  data = young.dat,
+  data = dat,
   error = "greenwood"
 )
 
-saveRDS(km.young.unweighted, "model_fits/1529/km-young-unweighted.rds")
-saveRDS(km.young.weighted, "model_fits/1529/km-young-weighted.rds")
-saveRDS(km.young_agecat_unweighted, "model_fits/1529/km-young_agecat_unweighted.rds")
-saveRDS(km.young_agecat_weighted, "model_fits/1529/km-young_agecat_weighted.rds")
+saveRDS(km_agecat_weighted, "model_fits/1529/km_ac_weighted.rds")
 
-######## flexsurv models ######################
+## initial ego age category
+km_i_agecat_weighted <- survfit(
+  formula = Surv(time = t_o, time2 = t_c, event = censored) ~ e.agecat.initial,
+  weights = e.weight,
+  data = dat,
+  error = "greenwood"
+)
+
+saveRDS(km_i_agecat_weighted, "model_fits/1529/km_i_agecat_weighted.rds")
+
+## by reltype
+km_reltype_weighted <- survfit(
+  formula = Surv(time = t_o, time2 = t_c, event = censored) ~ reltype,
+  weights = e.weight,
+  data = dat,
+  error = "greenwood"
+)
+
+saveRDS(km_reltype_weighted, "model_fits/1529/km_reltype_weighted.rds")
+
+
+## by ego # parts in last year
+km_eparts_weighted <- survfit(
+  formula = Surv(time = t_o, time2 = t_c, event = censored) ~ e.partsyr3,
+  weights = e.weight,
+  data = dat,
+  error = "greenwood"
+)
+
+saveRDS(km_eparts_weighted, "model_fits/1529/km_eparts_weighted.rds")
+
+## by ego race
+km_erace_weighted <- survfit(
+  formula = Surv(time = t_o, time2 = t_c, event = censored) ~ e.race,
+  weights = e.weight,
+  data = dat,
+  error = "greenwood"
+)
+
+saveRDS(km_erace_weighted, "model_fits/1529/km_erace_weighted.rds")
+
+
+######## Flexsurv models ######################
 # no covs for reference
-exp.young <- flexsurvreg(Surv(t_o, t_c, censored) ~ 1, 
-                         data = young.dat, dist = "exp", weights = e.weight)
+expFlex <- flexsurvreg(Surv(t_o, t_c, censored) ~ 1, 
+                       data = dat, dist = "exp", weights = e.weight)
 
-weib.young <- flexsurvreg(Surv(t_o, t_c, censored) ~ 1, 
-                          data = young.dat, dist = "weibull", weights = e.weight)
+weibFlex <- flexsurvreg(Surv(t_o, t_c, censored) ~ 1, 
+                        data = dat, dist = "weibull", weights = e.weight)
 
-saveRDS(exp.young, "model_fits/1529/exp.young.rds")
-saveRDS(weib.young, "model_fits/1529/weib.young.rds")
+saveRDS(expFlex, "model_fits/1529/expFlex.rds")
+saveRDS(weibFlex, "model_fits/1529/weibFlex.rds")
 
+
+#----------------------- AGE CAT ---------------------------------------------------
+  
+e.agecat <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat, 
+                              data = dat, dist = "exp", weights = e.weight)
+
+w.agecat <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat, 
+                               data = dat, dist = "weibull", weights = e.weight) 
+
+saveRDS(e.agecat, "model_fits/1529/eagecat.rds")
+saveRDS(w.agecat, "model_fits/1529/wagecat.rds")
+
+# ----------------------- RACE -------------------------------------------------------
+
+e.race <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.race, 
+                      data = dat, dist = "exp", weights = e.weight) 
+
+w.race <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.race, 
+                      data = dat, dist = "weibull", weights = e.weight) 
+
+saveRDS(e.race, "model_fits/1529/erace.rds")
+saveRDS(w.race, "model_fits/1529/wrace.rds")
+
+# ----------------------- RELTYPE ----------------------------------------------------
+
+e.reltype <- flexsurvreg(Surv(t_o, t_c, censored) ~ reltype, 
+                         data = dat, dist = "exp", weights = e.weight) 
+
+saveRDS(e.reltype, "model_fits/1529/ereltype.rds")
+
+w.reltype <- flexsurvreg(Surv(t_o, t_c, censored) ~ reltype, 
+                         data = dat, dist = "weibull", weights = e.weight) 
+
+saveRDS(w.reltype, "model_fits/1529/wreltype.rds")
+
+# ----------------------- NPARTS LAST YEAR -------------------------------------------
+
+e.partsyr <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.partsyr3, 
+                         data = dat, dist = "exp", weights = e.weight) 
+
+saveRDS(e.partsyr, "model_fits/1529/epartsyr.rds")
+
+w.partsyr <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.partsyr3, 
+                         data = dat, dist = "weibull", weights = e.weight) 
+
+saveRDS(w.partsyr, "model_fits/1529/wpartsyr.rds")
+
+
+
+# ----------------------- MOMENTARY DEGREE -------------------------------------------
+
+e.deg <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.deg.main, 
+                     data = dat, dist = "exp", weights = e.weight) 
+
+w.deg <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.deg.main, 
+                     data = dat, dist = "weibull", weights = e.weight) 
+
+saveRDS(e.deg, "model_fits/1529/edeg.rds")
+saveRDS(w.deg, "model_fits/1529/wdeg.rds")
+
+
+# ----------------------- network type -------------------------------------------
+
+e.network <- flexsurvreg(Surv(t_o, t_c, censored) ~ network1, 
+                         data = dat, dist = "exp", weights = e.weight) 
+
+
+w.network <- flexsurvreg(Surv(t_o, t_c, censored) ~ network1, 
+                         data = dat, dist = "weibull", weights = e.weight) 
+
+saveRDS(e.network, "model_fits/1529/enetwork.rds")
+saveRDS(w.network, "model_fits/1529/wnetwork.rds")
+
+# ----------------------- MULTIVARIATE -------------------------------------------
+
+e.relparts <- flexsurvreg(Surv(t_o, t_c, censored) ~ reltype + e.partsyr3, 
+                          data = dat, dist = "exp", weights = e.weight)
+
+w.relparts <- flexsurvreg(Surv(t_o, t_c, censored) ~ reltype + e.partsyr3, 
+                          data = dat, dist = "weibull", weights = e.weight) 
+
+saveRDS(e.relparts, "model_fits/1529/erelparts.rds")
+saveRDS(w.relparts, "model_fits/1529/wrelparts.rds")
+
+#---
+
+e.ageparts <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat + e.partsyr3, 
+                          data = dat, dist = "exp", weights = e.weight) 
+
+w.ageparts <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat + e.partsyr3, 
+                          data = dat, dist = "weibull", weights = e.weight) 
+
+saveRDS(e.ageparts, "model_fits/1529/eageparts.rds")
+saveRDS(w.ageparts, "model_fits/1529/wageparts.rds")
+
+#---
+
+e.raceparts <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.race + e.partsyr3, 
+                           data = dat, dist = "exp", weights = e.weight)
+
+w.raceparts <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.race + e.partsyr3, 
+                           data = dat, dist = "weibull", weights = e.weight) 
+
+saveRDS(e.raceparts, "model_fits/1529/eraceparts.rds")
+saveRDS(w.raceparts, "model_fits/1529/wraceparts.rds")
+
+#---
+
+e.racerels <- flexsurvreg(Surv(t_o, t_c, censored) ~ reltype + e.race, 
+                          data = dat, dist = "exp", weights = e.weight)
+
+w.racerels <- flexsurvreg(Surv(t_o, t_c, censored) ~ reltype + e.race, 
+                          data = dat, dist = "weibull", weights = e.weight)
+
+saveRDS(e.racerels, "model_fits/1529/eracerels.rds")
+saveRDS(w.racerels, "model_fits/1529/wracerels.rds")
+
+#---
+
+e.raceage <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat + e.race, 
+                         data = dat, dist = "exp", weights = e.weight)
+
+w.raceage <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat + e.race, 
+                         data = dat, dist = "weibull", weights = e.weight)
+
+saveRDS(e.raceage, "model_fits/1529/eraceage.rds")
+saveRDS(w.raceage, "model_fits/1529/wraceage.rds")
+
+#---
+
+e.agerels <-  flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat + reltype, 
+                          data = dat, dist = "exp", weights = e.weight)
+
+w.agerels <-  flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat + reltype, 
+                          data = dat, dist = "weibull", weights = e.weight)
+
+saveRDS(e.agerels, "model_fits/1529/eagerels.rds")
+saveRDS(w.agerels, "model_fits/1529/wagerels.rds")
+
+#---
+
+e.racedeg <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.race + e.deg.main, 
+                         data = dat, dist = "exp", weights = e.weight)
+
+w.racedeg <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.race + e.deg.main, 
+                         data = dat, dist = "weibull", weights = e.weight)
+
+saveRDS(e.racedeg, "model_fits/1529/eracedeg.rds")
+saveRDS(w.racedeg, "model_fits/1529/wracedeg.rds")
+
+#---
+
+e.agedeg <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.deg.main + e.agecat, 
+                        data = dat, dist = "exp", weights = e.weight)
+
+# here - model unfit. "system is computationally singular"
+w.agedeg <-  flexsurvreg(Surv(t_o, t_c, censored) ~ e.deg.main + e.agecat, 
+                         data = dat, dist = "weibull", weights = e.weight)
+
+saveRDS(e.agedeg, "model_fits/1529/eagedeg.rds")
+saveRDS(w.agedeg, "model_fits/1529/wagedeg.rds")
+
+
+
+################### other age models ######################
 # ego current age 
 expYoungCurrAge <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.age, 
                                data = young.dat, dist = "exp", weights = e.weight)
@@ -77,15 +294,7 @@ weibYoungAgeDiff <- flexsurvreg(Surv(t_o, t_c, censored) ~ diff.sqrt.age,
 saveRDS(expYoungAgeDiff, "model_fits/1529/expYoungAgeDiff.rds")
 saveRDS(weibYoungAgeDiff, "model_fits/1529/weibYoungAgeDiff.rds")
 
-# age cat current 
-expYoungAgeCat <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat, 
-                              data = young.dat, dist = "exp", weights = e.weight)
 
-weibYoungAgeCat <- flexsurvreg(Surv(t_o, t_c, censored) ~ e.agecat, 
-                               data = young.dat, dist = "weibull", weights = e.weight) 
-
-saveRDS(expYoungAgeCat, "model_fits/1529/expYoungAgeCat.rds")
-saveRDS(weibYoungAgeCat, "model_fits/1529/weibYoungAgeCat.rds")
 
 
 ######## latent mixture models ################

@@ -7,7 +7,7 @@ library(here)
 library(survival)
 
 #### Load data ####
-dat <- readRDS(here("model_fits", "survdat.rds"))
+dat <- readRDS("~/NSFG_DATA/Objects/altersegos_survdat.rds")
 
 #### Modifed Kaplan-Meier Models ####
 
@@ -28,6 +28,12 @@ km_agecat_current <- survfit(
 )
 
 saveRDS(km_agecat_current, "model_fits/km/km-agecat-current.rds")
+
+# no log-rank test for left-truncated data
+survdiff(Surv(time = t_o, time2 = t_c, event = censored) ~ e.agecat,
+         data = dat)
+# lets try to fit a coz ph model to get a statistic
+
 
 ## initial ego age category
 km_agecat_initial <- survfit(
@@ -60,6 +66,12 @@ km_agecat_weighted <- survfit(
 
 saveRDS(km_agecat_weighted, "model_fits/km/km_ac_weighted.rds")
 
+e.agecat.coxph <- coxph(Surv(time = t_o, time2 = t_c, event = censored) ~ e.agecat,
+                        data = dat,
+                        weights = e.weight,
+                        robust = T)
+saveRDS(e.agecat.coxph, "model_fits/km/agecat-coxph.rds")
+
 ## initial ego age category
 km_i_agecat_weighted <- survfit(
   formula = Surv(time = t_o, time2 = t_c, event = censored) ~ e.agecat.initial,
@@ -70,4 +82,69 @@ km_i_agecat_weighted <- survfit(
 
 saveRDS(km_i_agecat_weighted, "model_fits/km/km_i_agecat_weighted.rds")
 
+## by reltype
+km_reltype_weighted <- survfit(
+  formula = Surv(time = t_o, time2 = t_c, event = censored) ~ reltype,
+  weights = e.weight,
+  data = dat,
+  error = "greenwood"
+)
 
+saveRDS(km_reltype_weighted, "model_fits/km/km_reltype_weighted.rds")
+
+reltype.coxph <- coxph(Surv(time = t_o, time2 = t_c, event = censored) ~ reltype,
+                        data = dat,
+                        weights = e.weight,
+                        robust = T)
+saveRDS(reltype.coxph, "model_fits/km/reltype-coxph.rds")
+
+
+## by ego # parts in last year
+km_eparts_weighted <- survfit(
+  formula = Surv(time = t_o, time2 = t_c, event = censored) ~ e.partsyr3,
+  weights = e.weight,
+  data = dat,
+  error = "greenwood"
+)
+
+saveRDS(km_eparts_weighted, "model_fits/km/km_eparts_weighted.rds")
+
+
+partsyr.coxph <- coxph(Surv(time = t_o, time2 = t_c, event = censored) ~ e.partsyr3,
+                       data = dat,
+                       weights = e.weight,
+                       robust = T)
+saveRDS(partsyr.coxph, "model_fits/km/partsyr-coxph.rds")
+
+## by ego race
+km_erace_weighted <- survfit(
+  formula = Surv(time = t_o, time2 = t_c, event = censored) ~ e.race,
+  weights = e.weight,
+  data = dat,
+  error = "greenwood"
+)
+
+saveRDS(km_erace_weighted, "model_fits/km/km_erace_weighted.rds")
+
+erace.coxph <- coxph(Surv(time = t_o, time2 = t_c, event = censored) ~ e.race,
+                       data = dat,
+                       weights = e.weight,
+                       robust = T)
+saveRDS(erace.coxph, "model_fits/km/erace-coxph.rds")
+
+
+## by network (mar/cohab and other)
+km_network_weighted <- survfit(
+  formula = Surv(time = t_o, time2 = t_c, event = censored) ~ network1,
+  weights = e.weight,
+  data = dat,
+  error = "greenwood"
+)
+
+saveRDS(km_network_weighted, "model_fits/km/km_network_weighted.rds")
+
+network.coxph <- coxph(Surv(time = t_o, time2 = t_c, event = censored) ~ network1,
+                       data = dat,
+                       weights = e.weight,
+                       robust = T)
+saveRDS(network.coxph, "model_fits/km/network-coxph.rds")

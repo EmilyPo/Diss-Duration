@@ -22,10 +22,11 @@ library(survival)
 library(here)
 suppressWarnings(library(ggfortify))
 suppressWarnings(library(flexsurv))
+suppressWarnings(library(survminer))
 ```
 
 ```{r data, include=FALSE}
-dat <- readRDS(here("model_fits", "survdat.rds"))
+dat <- readRDS("~/NSFG_DATA/Objects/altersegos_survdat.rds")
 ```
 
 
@@ -39,7 +40,7 @@ Each respondent was asked about their last 3 sexual partnerships that either end
 
 # observed rels
 examples <- dat[1:75,]
-examples <- examples %>% select(dfs, dls, active) %>% mutate(dfs=-dfs, dls=-dls) %>% mutate(dfs_c = dls, dls_c=-dfs)
+examples <- examples %>% select(dfs, dls, active) %>% mutate(dfs=-dfs, dls=-dls) %>% mutate(dfs_c = dls)
 examples$id <- c(1:nrow(examples))
 
 # left truncated rels 
@@ -85,6 +86,6 @@ segments(
   col="darkred"
 )
 # legend
-legend(-348, 17, legend = c("Known Durations", "Possible Right Censored Durations", "Possible Unobserved (Truncated) Durations"), 
+legend("bottomleft", legend = c("Known Durations", "Possible Right Censored Durations", "Possible Unobserved (Truncated) Durations"), 
        col = c("darkblue", "darkred", "darkgreen"), lwd=2, cex=0.6)
 ```
