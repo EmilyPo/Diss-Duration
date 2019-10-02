@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>References | NSFG &amp; Event History Analysis</title>
-  <meta name="description" content="References | NSFG &amp; Event History Analysis" />
+  <title>Chapter 5 Parametric Models | NSFG &amp; Event History Analysis</title>
+  <meta name="description" content="Chapter 5 Parametric Models | NSFG &amp; Event History Analysis" />
   <meta name="generator" content="bookdown 0.12 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="References | NSFG &amp; Event History Analysis" />
+  <meta property="og:title" content="Chapter 5 Parametric Models | NSFG &amp; Event History Analysis" />
   <meta property="og:type" content="book" />
   
   
@@ -16,7 +16,7 @@
   
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="References | NSFG &amp; Event History Analysis" />
+  <meta name="twitter:title" content="Chapter 5 Parametric Models | NSFG &amp; Event History Analysis" />
   
   
   
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="immune-fraction.html">
-
+<link rel="prev" href="dur.html">
+<link rel="next" href="mixture-models.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -156,17 +156,213 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="references" class="section level1 unnumbered">
-<h1>References</h1>
+<div id="parametric-models" class="section level1">
+<h1><span class="header-section-number">Chapter 5</span> Parametric Models</h1>
+<div id="univariate" class="section level2">
+<h2><span class="header-section-number">5.1</span> Univariate</h2>
+<div id="age-category-current" class="section level3">
+<h3><span class="header-section-number">5.1.1</span> Age Category (Current)</h3>
+<p><img src="Survival_Analysis_files/figure-html/agecat-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/agecat-2.png" width="672" /></p>
+</div>
+<div id="race-1" class="section level3">
+<h3><span class="header-section-number">5.1.2</span> Race</h3>
+<p><img src="Survival_Analysis_files/figure-html/race-cov-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/race-cov-2.png" width="672" /></p>
+</div>
+<div id="rel-type" class="section level3">
+<h3><span class="header-section-number">5.1.3</span> Rel Type</h3>
+<p><img src="Survival_Analysis_files/figure-html/reltype-cov-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/reltype-cov-2.png" width="672" /></p>
+</div>
+<div id="network" class="section level3">
+<h3><span class="header-section-number">5.1.4</span> Network</h3>
+<p>Similar to above, but split into marcoh and other - two of the networks we often split out <img src="Survival_Analysis_files/figure-html/network-cov-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/network-cov-2.png" width="672" /></p>
+</div>
+<div id="partners-in-last-year" class="section level3">
+<h3><span class="header-section-number">5.1.5</span> Partners in Last Year</h3>
+<p>Note: this was also run with “osnpyr” and “maxospyr” with very little differences (not shown)</p>
+<p><img src="Survival_Analysis_files/figure-html/partsyr-cov-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/partsyr-cov-2.png" width="672" /></p>
+</div>
+<div id="momentary-degree" class="section level3">
+<h3><span class="header-section-number">5.1.6</span> Momentary Degree</h3>
+<p><img src="Survival_Analysis_files/figure-html/deg-cov-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/deg-cov-2.png" width="672" /></p>
+</div>
+<div id="aic-comparison" class="section level3">
+<h3><span class="header-section-number">5.1.7</span> AIC Comparison</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Exp Dist</th>
+<th>Weibull</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>No Covs</td>
+<td>7.756213110^{8}</td>
+<td>6.786521810^{8}</td>
+</tr>
+<tr class="even">
+<td>Age Category</td>
+<td>7.370552710^{8}</td>
+<td>6.725017810^{8}</td>
+</tr>
+<tr class="odd">
+<td>Race</td>
+<td>7.737999210^{8}</td>
+<td>6.7809510^{8}</td>
+</tr>
+<tr class="even">
+<td>Rel Type - 3</td>
+<td>6.331587610^{8}</td>
+<td>6.1316810^{8}</td>
+</tr>
+<tr class="odd">
+<td>Rel Type - 2</td>
+<td>6.506196510^{8}</td>
+<td>6.261506910^{8}</td>
+</tr>
+<tr class="even">
+<td>Parts in Last Year</td>
+<td>6.511584510^{8}</td>
+<td>6.177360710^{8}</td>
+</tr>
+<tr class="odd">
+<td>Momentary Degree</td>
+<td>6.668315410^{8}</td>
+<td>6.127564910^{8}</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="multivariate" class="section level2">
+<h2><span class="header-section-number">5.2</span> Multivariate</h2>
+<p>these plots are messy</p>
+<div id="age-cat-race" class="section level3">
+<h3><span class="header-section-number">5.2.1</span> Age Cat + Race</h3>
+<p><img src="Survival_Analysis_files/figure-html/agerace-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/agerace-2.png" width="672" /></p>
+</div>
+<div id="agecat-rel-type" class="section level3">
+<h3><span class="header-section-number">5.2.2</span> AgeCat + Rel Type</h3>
+<p><img src="Survival_Analysis_files/figure-html/agerels-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/agerels-2.png" width="672" /></p>
+</div>
+<div id="race-rel-type" class="section level3">
+<h3><span class="header-section-number">5.2.3</span> Race + Rel Type</h3>
+<p><img src="Survival_Analysis_files/figure-html/racerels-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/racerels-2.png" width="672" /></p>
+</div>
+<div id="age-cat-partners-in-last-year" class="section level3">
+<h3><span class="header-section-number">5.2.4</span> Age Cat + Partners in Last Year</h3>
+<p><img src="Survival_Analysis_files/figure-html/ageparts-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/ageparts-2.png" width="672" /></p>
+</div>
+<div id="race-partners-in-last-year" class="section level3">
+<h3><span class="header-section-number">5.2.5</span> Race + Partners in Last Year</h3>
+<p><img src="Survival_Analysis_files/figure-html/raceparts-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/raceparts-2.png" width="672" /></p>
+</div>
+<div id="age-cat-momentary-degree" class="section level3">
+<h3><span class="header-section-number">5.2.6</span> Age Cat + Momentary Degree</h3>
+<p><img src="Survival_Analysis_files/figure-html/agedeg-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/agedeg-2.png" width="672" /></p>
+</div>
+<div id="race-momentary-degree" class="section level3">
+<h3><span class="header-section-number">5.2.7</span> Race + Momentary Degree</h3>
+<p><img src="Survival_Analysis_files/figure-html/racedeg-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/racedeg-2.png" width="672" /></p>
+</div>
+<div id="rel-type-parts-last-year" class="section level3">
+<h3><span class="header-section-number">5.2.8</span> Rel Type + Parts Last Year</h3>
+<p><img src="Survival_Analysis_files/figure-html/relparts-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/relparts-2.png" width="672" /></p>
+</div>
+<div id="model-comparison-1" class="section level3">
+<h3><span class="header-section-number">5.2.9</span> Model Comparison</h3>
+<table>
+<thead>
+<tr class="header">
+<th>Model</th>
+<th>Exp Dist</th>
+<th>Weibull</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>No Covs</td>
+<td>7.756213110^{8}</td>
+<td>6.786521810^{8}</td>
+</tr>
+<tr class="even">
+<td>Age Cat + Race</td>
+<td>7.361256510^{8}</td>
+<td>6.720240310^{8}</td>
+</tr>
+<tr class="odd">
+<td>Age Cat + Rel Type</td>
+<td>6.317939910^{8}</td>
+<td>6.129736610^{8}</td>
+</tr>
+<tr class="even">
+<td>Race + Rel Type</td>
+<td>6.325003710^{8}</td>
+<td>6.129459610^{8}</td>
+</tr>
+<tr class="odd">
+<td>Age Cat + PartsLstYear</td>
+<td>6.430247410^{8}</td>
+<td>6.153737810^{8}</td>
+</tr>
+<tr class="even">
+<td>Race + PartsLastYear</td>
+<td>6.508537510^{8}</td>
+<td>6.17670510^{8}</td>
+</tr>
+<tr class="odd">
+<td>Age Cat + Degree</td>
+<td>6.491474810^{8}</td>
+<td>6.104343110^{8}</td>
+</tr>
+<tr class="even">
+<td>Race + Degree</td>
+<td>6.686300610^{8}</td>
+<td>6.12263810^{8}</td>
+</tr>
+<tr class="odd">
+<td>Rel Type + PartsLstYear</td>
+<td>6.037482310^{8}</td>
+<td>5.884356710^{8}</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="other-age-vars" class="section level3">
+<h3><span class="header-section-number">5.2.10</span> Other Age Vars</h3>
+<p>that don’t tell us much</p>
+<p><img src="Survival_Analysis_files/figure-html/exp-plots-1.png" width="50%" /><img src="Survival_Analysis_files/figure-html/exp-plots-2.png" width="50%" /><img src="Survival_Analysis_files/figure-html/exp-plots-3.png" width="50%" /><img src="Survival_Analysis_files/figure-html/exp-plots-4.png" width="50%" /></p>
+<p><img src="Survival_Analysis_files/figure-html/exp-plot-full-1.png" width="672" /></p>
+<p><img src="Survival_Analysis_files/figure-html/weib-plots-1.png" width="50%" /><img src="Survival_Analysis_files/figure-html/weib-plots-2.png" width="50%" /><img src="Survival_Analysis_files/figure-html/weib-plots-3.png" width="50%" /><img src="Survival_Analysis_files/figure-html/weib-plots-4.png" width="50%" /></p>
+<p><img src="Survival_Analysis_files/figure-html/weib-plot-full-1.png" width="672" /></p>
+</div>
+</div>
+<div id="thoughts-discussions" class="section level2">
+<h2><span class="header-section-number">5.3</span> Thoughts &amp; Discussions</h2>
+<ul>
+<li>age is not responsible for the initial steep drop-off</li>
+<li>exp mixture models &amp; weibulls fit better because there is failty endogenous to the relationships</li>
+<li>weibull isn’t masking the effect of age</li>
+<li>has anybody demonstrated a crosswalk between a exponential mixture and a weibull?</li>
+<li>theory: why doesn’t age have a larger effect?</li>
+<li>age / period / cohort effects - what would we expect?</li>
+</ul>
+<p><strong>Age’s effects on relationship duration are complex</strong><br />
+- Relationship age at time of interview usually lower for younger people, but due to a combination of ‘churn’ and not being alive long enough to have had decades-long relationships. - Age difference between ego and alter matters, but affect of age difference is likely to vary across the life course. - The effect age of age difference on relationship duration may be different depending on if the male or female is the older partner. - Which age is most important for relationship persistence? Age at beginning of relationship, or current age? - Whose age to model? Ego age? Partner age? Ego age and age difference?</p>
+<p><strong>Dyadic Complications</strong><br />
+- Relationship duration is unlikely to be independent of other relationships each partner may be participating in. - Is there a way to represent this in a parametric regression model, and if not, what are the consequences of assuming independence between relationships?</p>
+<p>Likely other complications.</p>
 
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="immune-fraction.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-
+<a href="dur.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="mixture-models.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>

@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>References | NSFG &amp; Event History Analysis</title>
-  <meta name="description" content="References | NSFG &amp; Event History Analysis" />
+  <title>Chapter 6 Mixture Models | NSFG &amp; Event History Analysis</title>
+  <meta name="description" content="Chapter 6 Mixture Models | NSFG &amp; Event History Analysis" />
   <meta name="generator" content="bookdown 0.12 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="References | NSFG &amp; Event History Analysis" />
+  <meta property="og:title" content="Chapter 6 Mixture Models | NSFG &amp; Event History Analysis" />
   <meta property="og:type" content="book" />
   
   
@@ -16,7 +16,7 @@
   
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="References | NSFG &amp; Event History Analysis" />
+  <meta name="twitter:title" content="Chapter 6 Mixture Models | NSFG &amp; Event History Analysis" />
   
   
   
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="immune-fraction.html">
-
+<link rel="prev" href="parametric-models.html">
+<link rel="next" href="young.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -156,17 +156,131 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="references" class="section level1 unnumbered">
-<h1>References</h1>
+<div id="mixture-models" class="section level1">
+<h1><span class="header-section-number">Chapter 6</span> Mixture Models</h1>
+<p><strong>Mixed Exp Models by Current AgeCat</strong></p>
+<p>Mixture model across whole pop does pretty well but overestimates duration of young rels and underestmates duration of long rels. Let’s see if we can do better when each age cat is its own mixture model (2 lambdas and a mixture weight).</p>
+<p>Here I fit 2-component mixture models to each of the age categories and plot them as separate lines.</p>
+<p>Two models categories are displayed -</p>
+<ol style="list-style-type: decimal">
+<li><p>a series of mixed exponential models that were fit to specific ego age categories, which when are averaged according to pop size to compare to overall K-M and other models (this means that each age category has its own two rate params (rel dur) and proportion of rels in each distribution (weight))</p></li>
+<li><p>one mixed exponential model with two rate params that apply to all age groups, but the weight changes by age category. The first model should fit K-M better, but this is to see if one short/long duration is a reasonable simplifying assumption (with weights changing by age)</p></li>
+</ol>
+<div id="mixed-exp-1" class="section level2">
+<h2><span class="header-section-number">6.1</span> Mixed Exp #1</h2>
+<p>a series of mixed exponential models that were fit to specific ego age categories, which when are averaged according to pop size to compare to overall K-M and other models (this means that each age category has its own two rate params (rel dur) and proportion of rels in each distribution (weight))</p>
+<p><img src="Survival_Analysis_files/figure-html/mixed-exp-ea-1.png" width="672" /><img src="Survival_Analysis_files/figure-html/mixed-exp-ea-2.png" width="672" /></p>
+<table>
+<thead>
+<tr class="header">
+<th>Age Category</th>
+<th>Short Dur (years)</th>
+<th>Long Dur (years)</th>
+<th>Prop. Short</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>15-19</td>
+<td>0.1</td>
+<td>1.58</td>
+<td>0.32</td>
+</tr>
+<tr class="even">
+<td>20-24</td>
+<td>0.18</td>
+<td>3.35</td>
+<td>0.45</td>
+</tr>
+<tr class="odd">
+<td>25-29</td>
+<td>0.35</td>
+<td>7.61</td>
+<td>0.54</td>
+</tr>
+<tr class="even">
+<td>30-34</td>
+<td>0.48</td>
+<td>12.86</td>
+<td>0.64</td>
+</tr>
+<tr class="odd">
+<td>35-39</td>
+<td>0.63</td>
+<td>19.41</td>
+<td>0.69</td>
+</tr>
+<tr class="even">
+<td>40-44</td>
+<td>1.13</td>
+<td>36.27</td>
+<td>0.82</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="mixed-exp-2" class="section level2">
+<h2><span class="header-section-number">6.2</span> Mixed Exp #2</h2>
+<p>generalization of above: one mixed exponential model with two rate params that apply to all age groups, but the weight changes by age category. The first model should fit K-M better, but this is to see if one short/long duration is a reasonable simplifying assumption (with weights changing by age)</p>
+<p><img src="Survival_Analysis_files/figure-html/compare-mixexps-1.png" width="672" /></p>
+<table>
+<thead>
+<tr class="header">
+<th>Short Duration</th>
+<th>Long Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0.46</td>
+<td>10.02</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr class="header">
+<th>Age Category</th>
+<th>Proportion Rels Short Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>15-19</td>
+<td>0.78</td>
+</tr>
+<tr class="even">
+<td>20-24</td>
+<td>0.68</td>
+</tr>
+<tr class="odd">
+<td>25-29</td>
+<td>0.59</td>
+</tr>
+<tr class="even">
+<td>30-34</td>
+<td>0.61</td>
+</tr>
+<tr class="odd">
+<td>35-40</td>
+<td>0.59</td>
+</tr>
+<tr class="even">
+<td>40-44</td>
+<td>0.61</td>
+</tr>
+</tbody>
+</table>
 
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="immune-fraction.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-
+<a href="parametric-models.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="young.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>

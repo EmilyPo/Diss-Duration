@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>References | NSFG &amp; Event History Analysis</title>
-  <meta name="description" content="References | NSFG &amp; Event History Analysis" />
+  <title>Chapter 9 Immune Fraction | NSFG &amp; Event History Analysis</title>
+  <meta name="description" content="Chapter 9 Immune Fraction | NSFG &amp; Event History Analysis" />
   <meta name="generator" content="bookdown 0.12 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="References | NSFG &amp; Event History Analysis" />
+  <meta property="og:title" content="Chapter 9 Immune Fraction | NSFG &amp; Event History Analysis" />
   <meta property="og:type" content="book" />
   
   
@@ -16,7 +16,7 @@
   
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="References | NSFG &amp; Event History Analysis" />
+  <meta name="twitter:title" content="Chapter 9 Immune Fraction | NSFG &amp; Event History Analysis" />
   
   
   
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="immune-fraction.html">
-
+<link rel="prev" href="kirk.html">
+<link rel="next" href="references.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -156,8 +156,21 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="references" class="section level1 unnumbered">
-<h1>References</h1>
+<div id="immune-fraction" class="section level1">
+<h1><span class="header-section-number">Chapter 9</span> Immune Fraction</h1>
+<p>immunes are present in the population if and only if : <span class="math display">\[p = F(\infty) &lt; 1\]</span></p>
+<p>where <span class="math inline">\(p\)</span> is the proportion of susceptibles and <span class="math inline">\(1-F(\infty)\)</span> is the immune proportion</p>
+<p>the failure rate of the susceptible component is specified by <span class="math inline">\(F_{0}(t)\)</span></p>
+<p>the problem in the data is that we don’t know which observations are immune - but their presence could be suggested by the KM estimates shown previously (long flat tail of certain groups like married rels)</p>
+<p><span class="math inline">\(F\)</span> is the distribution of exact survival times <span class="math inline">\(G\)</span> is the distribution of censoring times</p>
+<p><span class="math inline">\(\tau_{F}\)</span> = maximum duration of exact observations <span class="math inline">\(\tau_{G}\)</span> = maximum duration of censored observations</p>
+<p><span class="math inline">\(\tau_{F}\)</span> = 353 <span class="math inline">\(\tau_{G}\)</span> = 447</p>
+<p>but, only 10 censored obs are longer than the longest exact obs.</p>
+<p>15 longest by exact or censored:</p>
+<p>Exact: 353, 336, 328, 322, 317, 314, 312, 312, 308, 296, 296, 294, 293, 293, 285<br />
+Censored: 447, 395, 391, 370, 362, 361, 361, 359, 359, 358, 353, 352, 350, 349, 349</p>
+<p>this likely means that even if there is a cure fraction, it is very small and unlikely to be meaningful in a statistical model</p>
+<p>(also I fit parametric models with a cure fraction and they were not better than the models w/o a cure fraction…see R file on “other” model extensions)</p>
 
 </div>
             </section>
@@ -165,8 +178,8 @@
           </div>
         </div>
       </div>
-<a href="immune-fraction.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-
+<a href="kirk.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="references.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>

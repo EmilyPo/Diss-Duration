@@ -4,11 +4,11 @@
 
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>References | NSFG &amp; Event History Analysis</title>
-  <meta name="description" content="References | NSFG &amp; Event History Analysis" />
+  <title>Chapter 3 Kaplan-Meier Models | NSFG &amp; Event History Analysis</title>
+  <meta name="description" content="Chapter 3 Kaplan-Meier Models | NSFG &amp; Event History Analysis" />
   <meta name="generator" content="bookdown 0.12 and GitBook 2.6.7" />
 
-  <meta property="og:title" content="References | NSFG &amp; Event History Analysis" />
+  <meta property="og:title" content="Chapter 3 Kaplan-Meier Models | NSFG &amp; Event History Analysis" />
   <meta property="og:type" content="book" />
   
   
@@ -16,7 +16,7 @@
   
 
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="References | NSFG &amp; Event History Analysis" />
+  <meta name="twitter:title" content="Chapter 3 Kaplan-Meier Models | NSFG &amp; Event History Analysis" />
   
   
   
@@ -31,8 +31,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black" />
   
   
-<link rel="prev" href="immune-fraction.html">
-
+<link rel="prev" href="hist.html">
+<link rel="next" href="dur.html">
 <script src="libs/jquery-2.2.3/jquery.min.js"></script>
 <link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
 <link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
@@ -156,17 +156,86 @@
           <div class="page-inner">
 
             <section class="normal" id="section-">
-<div id="references" class="section level1 unnumbered">
-<h1>References</h1>
+<div id="kaplan-meier-models" class="section level1">
+<h1><span class="header-section-number">Chapter 3</span> Kaplan-Meier Models</h1>
+<p>As we see later in this document, models that use current ego age versus those that use initial ego age differ little. Both versions of age are conceptually interesting, but graphs below show by initial age is complicated to understand in this dataset given how the data was collected.</p>
+<p>I think that initial age at rel formation would be more useful for dissolution model in ERGMS b/c you wouldn’t have to keep re-calculating dissolution probability when nodes age</p>
+<div id="weighted-v-unweighted" class="section level3">
+<h3><span class="header-section-number">3.0.1</span> Weighted v Unweighted</h3>
+<p>just for comparison, from here on out unweighted k-m used with mixture models fit w/o survey weights</p>
+<p><img src="Survival_Analysis_files/figure-html/km-cats-1.png" width="672" /></p>
+</div>
+<div id="current-agecat" class="section level3">
+<h3><span class="header-section-number">3.0.2</span> Current AgeCat</h3>
+<div id="kaplan-meier" class="section level4">
+<h4><span class="header-section-number">3.0.2.1</span> Kaplan-Meier</h4>
+<p><img src="Survival_Analysis_files/figure-html/km-agecat-current-1.png" width="672" /></p>
+</div>
+<div id="cox-ph" class="section level4">
+<h4><span class="header-section-number">3.0.2.2</span> Cox PH</h4>
+<p><img src="Survival_Analysis_files/figure-html/coxph-agecat-1.png" width="672" /></p>
+</div>
+</div>
+<div id="relationship-type-e.g.3-networks" class="section level3">
+<h3><span class="header-section-number">3.0.3</span> Relationship Type (e.g. 3 Networks)</h3>
+<div id="kaplan-meier-1" class="section level4">
+<h4><span class="header-section-number">3.0.3.1</span> Kaplan-Meier</h4>
+<p><img src="Survival_Analysis_files/figure-html/reltype-1.png" width="672" /></p>
+</div>
+<div id="cox-ph-1" class="section level4">
+<h4><span class="header-section-number">3.0.3.2</span> Cox PH</h4>
+<p><img src="Survival_Analysis_files/figure-html/coxph-reltype-1.png" width="672" /></p>
+</div>
+</div>
+<div id="networks---2" class="section level3">
+<h3><span class="header-section-number">3.0.4</span> Networks - 2</h3>
+<div id="kaplan-meier-2" class="section level4">
+<h4><span class="header-section-number">3.0.4.1</span> Kaplan-Meier</h4>
+<p><img src="Survival_Analysis_files/figure-html/network2-1.png" width="672" /></p>
+</div>
+<div id="cox-ph-2" class="section level4">
+<h4><span class="header-section-number">3.0.4.2</span> Cox PH</h4>
+<p><img src="Survival_Analysis_files/figure-html/coxph-network2-1.png" width="672" /></p>
+</div>
+</div>
+<div id="number-partners-in-last-year" class="section level3">
+<h3><span class="header-section-number">3.0.5</span> Number Partners in Last Year</h3>
+<p>topcoded at 3; vaginal sex partners</p>
+<div id="kaplan-meier-3" class="section level4">
+<h4><span class="header-section-number">3.0.5.1</span> Kaplan-Meier</h4>
+<p><img src="Survival_Analysis_files/figure-html/partsyr3-1.png" width="672" /></p>
+</div>
+<div id="cox-ph-3" class="section level4">
+<h4><span class="header-section-number">3.0.5.2</span> Cox PH</h4>
+<p><img src="Survival_Analysis_files/figure-html/coxph-partsyr-1.png" width="672" /></p>
+</div>
+</div>
+<div id="race" class="section level3">
+<h3><span class="header-section-number">3.0.6</span> Race</h3>
+<div id="kaplan-meier-4" class="section level4">
+<h4><span class="header-section-number">3.0.6.1</span> Kaplan-Meier</h4>
+<p><img src="Survival_Analysis_files/figure-html/km-erace-1.png" width="672" /></p>
+</div>
+<div id="cox-ph-4" class="section level4">
+<h4><span class="header-section-number">3.0.6.2</span> Cox PH</h4>
+<p><img src="Survival_Analysis_files/figure-html/coxph-race-1.png" width="672" /></p>
+</div>
+</div>
+<div id="thoughts" class="section level3">
+<h3><span class="header-section-number">3.0.7</span> Thoughts</h3>
+<p>the plateuing of certain strata (i.e. cur/fmr spouses and those who have only had 1 parter in the last year) suggest an immune/cure fraction or “long-term survivors” - that a proportion of relationships in the data are not at risk of dissolving</p>
+<p>the histograms also hint at this - with the marriages becoming seeminly much more uniform than exponential</p>
+<p>SEE SECTION WHERE THIS GOES OUT THE WINDOW</p>
 
+</div>
 </div>
             </section>
 
           </div>
         </div>
       </div>
-<a href="immune-fraction.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
-
+<a href="hist.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="dur.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
     </div>
   </div>
 <script src="libs/gitbook-2.6.7/js/app.min.js"></script>
