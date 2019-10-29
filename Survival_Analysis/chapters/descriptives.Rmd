@@ -1,12 +1,12 @@
 # Histograms {#hist}
 
-setting aside censoring issues, show histograms of relationship age by relationship type 
+histograms of relationship age by relationship type 
 
 shows within-group distribution  
 
 using NSFG survey weights so representative of age groups, but pop sizes by age are not exactly equal - so graphs are not a perfect indicator of between-group rates of relationships but does give us a sense of overall activity  
 
-## Full Distribution, 15-44 year olds
+## Full Distribution, 15-44 year olds  
 
 looks exponential! so why do most of our models based on an exponential distribution fail to represent the data? look below by age cat...
 
@@ -14,7 +14,19 @@ looks exponential! so why do most of our models based on an exponential distribu
 ggplot(dat, aes(x = t_c_years, fill = reltype)) +
   geom_histogram(binwidth = 0.5) + 
   scale_x_continuous(name="years", breaks=seq(0,35,5)) + 
-  ggtitle("Relationship Age, Full Dataset (Ages 15-44)")
+  ggtitle("Relationships, Full Dataset (Ages 15-44)")
+
+dat %>% filter(active==0) %>% 
+  ggplot(aes(x = t_c_years, fill = reltype)) +
+  geom_histogram(binwidth = 0.5) + 
+  scale_x_continuous(name="years", breaks=seq(0,35,5)) + 
+  ggtitle("Relationship Duration: All Previous Relationships")
+
+dat %>% filter(active==1) %>% 
+ggplot(aes(x = t_c_years, fill = reltype)) +
+  geom_histogram(binwidth = 0.5) + 
+  scale_x_continuous(name="years", breaks=seq(0,35,5)) + 
+  ggtitle("Relationship Length: All Active Partnerships")
 ```
 
 ## By Age Category
@@ -81,8 +93,8 @@ Steve wanted to see hists by weather a rel was inactive (exact duration) or acti
 
 ```{r hists2, echo=FALSE, out.width='50%', warning=FALSE}
 other <- "#619CFF"
-spouse <- "#F8766D"
-cohab <- "#00BA38"
+cohab <- "#F8766D"
+spouse <- "#00BA38"
 
 dat %>% filter(e.agecat %in% "15-19" & censored==1) %>%
   ggplot(aes(x = t_c_years, fill = reltype, weights = e.weight)) +

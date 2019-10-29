@@ -21,7 +21,7 @@ w.deg <- readRDS(here("model_fits", "covs", "wdeg.rds"))
 
 ```
 
-## Univariate 
+## Single Covariate 
 
 ### Age Category (Current)
 ```{r agecat, echo=FALSE, warning=FALSE}
@@ -126,14 +126,7 @@ Momentary Degree | `r AIC(e.deg)` | `r AIC(w.deg)`
 
 
 
-```{r PAA-plots, echo=FALSE}
-
-
-
-```
-
-
-## Multivariate  
+## Multiple 
 
 these plots are messy 
 
