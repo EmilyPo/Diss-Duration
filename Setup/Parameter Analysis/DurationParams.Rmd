@@ -1,0 +1,353 @@
+---
+title: "More Data for Duration Sims, YOung"
+author: "Emily Pollock"
+date: "10/18/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(plotly)
+library(srvyr)
+library(reshape2)
+library(kableExtra)
+library(ergm.ego)
+#library(scales)
+#library(DataCombine)
+#library(DT)
+```
+
+More data NSFG for duration ergm sims
+
+Model Params:
+
+- proportion sexually debuted by age, sex  
+- time to relationship transition  
+
+
+Target Stats:  
+
+- mean rel lengths by reltype    
+- inst events rate (per year)  
+
+
+
+```{r load-data, echo=FALSE}
+nsfg <- readRDS("~/NSFG_DATA/Full/nsfg_complete.rds")
+nsfg <- nsfg %>% filter(age<30)
+svy <- as_survey_design(nsfg, weights = weight, ids = ego)
+
+# young egodata
+egodat <- readRDS("~/NSFG_DATA/Objects/fullEgodataYoung.rds")
+```
+
+```{r debut, echo=FALSE}
+debut <- svy %>% 
+          mutate(sex = as.factor(sex), age = as.factor(age), hadsex = as.factor(HADSEX)) %>%
+          group_by(sex, age, hadsex) %>% 
+          summarize(proportion = survey_mean())
+
+debuted <- debut[which(debut$hadsex==1),] 
+debuted <- dcast(debuted, age ~ sex, value.var = "proportion")
+
+debuted %>% plot_ly(x=~age, y=~`F`, name="F", type='scatter', mode="lines") %>%
+    add_trace(y=~M, name="M") %>%
+    layout(title="Proportion Sexually Debuted", yaxis=list(title="Proportion"), xaxis=list(title="Age"))
+```
+
+__Q: at what point do we say everyone is eligible for relationships?__  
+(even up to age 44 not 100% sexually debuted)  
+
+
+## Duration of relationship by type 
+
+mean of active relationships (where we assume exponential dist)
+plus
+estimates from survival analysis (using all reported relationships), exponential model fit 
+
+```{r reldur, echo=FALSE, include=FALSE}
+expFit <- readRDS(here("Survival_Analysis", "model_fits", "covs", "ereltype.rds")) 
+cohab_mean <- 1/exp(coef(expFit)[[1]])
+spouse_mean <- cohab_mean*(1/exp(coef(expFit)[[2]]))
+other_mean <- cohab_mean*(1/exp(coef(expFit)[[3]]))
+
+means <- as.data.frame(rbind(cohab_mean, spouse_mean, other_mean))
+means[,2] <- means[,1]/12 
+colnames(means) <- c("Months", "Years")
+
+dat <- readRDS("~/NSFG_DATA/Objects/altersegos_survdat.rds")
+datsvy <- as_survey_design(dat ,weights = weight, ids=ego)
+
+kable(means)
+
+datsvy %>% filter(active==1) %>% 
+  group_by(reltype) %>% 
+  summarize(mean_months = survey_mean(edge_age_month),mean_yrs = survey_mean(edge_age_month/12)) %>%
+  select(-mean_months_se, -mean_yrs_se)
+```
+
+```{r reldur-young, echo=FALSE}
+expFityoung <- readRDS(here("Survival_Analysis", "model_fits", "1529", "ereltype.rds")) 
+
+cohab_mean_y <- 1/exp(coef(expFityoung)[[1]])
+spouse_mean_y <- cohab_mean*(1/exp(coef(expFityoung)[[2]]))
+other_mean_y <- cohab_mean*(1/exp(coef(expFityoung)[[3]]))
+
+means <- as.data.frame(rbind(cohab_mean_y, spouse_mean_y, other_mean_y))
+means[,1] <- means[,1]/12 
+colnames(means) <- c("Mean Years")
+
+dat2 <- readRDS("~/NSFG_DATA/Objects/alters_young_for_young_egos.rds")
+datsvy2 <- as_survey_design(dat2 ,weights = weight, ids=ego)
+
+means2 <-  datsvy2 %>% filter(active==1) %>% group_by(reltype) %>% 
+  summarize(mean_yrs = survey_mean(edge_age_month/12))
+means2[,1] <- c("Cohab", "Spouse", "Other")
+
+```
+
+### Means
+`r kable(means2, format="html")`
+
+### Model Fits
+`r kable(means, format="html")`
+
+## Transition Times
+other -> cohab (time between rel start and cohabitation)  
+cohab -> marriage (time between cohabitation and marriage)  
+other -> marriage (time between rel start and marriage, no premarital cohabitation)  
+
+what proportion of all rels are marriages, cohabs, others at cross-section?
+
+### Current Cohabs or Marriages (who cohabitated premaritally)
+```{r rt-currentcohabsandmarrs, echo=FALSE}
+egosCM <- egodat$egos[which(egodat$egos$ego %in% egodat$altersMarCoh$ego),]
+
+marcohs <- merge(egodat$altersMarCoh, egosCM[,c("ego", "CMINTVW", "cmcohab")], by="ego")
+
+marcohs <- marcohs %>% 
+            filter(!is.na(cmcohab)) %>%
+            mutate(cmstart = CMINTVW-dfs) %>%
+            mutate(timetoCohab = cmcohab-cmstart) %>%
+            mutate(preCohabSex = ifelse(timetoCohab>0, "yes", 
+                       ifelse(timetoCohab==0, "at cohab",
+                       ifelse(timetoCohab <0, "no", NA))))
+
+
+marcohSvy <- as_survey_design(marcohs, weights = weight, ids=ego)
+
+# other to cohab (either current cohab or current marriage)
+otc <- marcohSvy %>% summarize(meanYears = survey_mean(timetoCohab/12, na.rm=T))
+
+# if you limit to only those who report positive
+otcp <- marcohSvy %>% filter(timetoCohab > 0) %>%
+  summarize(meanYears = survey_mean(timetoCohab/12, na.rm=T))
+
+# if you limit to only those who report negative
+otcn <- marcohSvy %>% filter(timetoCohab < 0) %>%
+  summarize(meanYears = survey_mean(timetoCohab/12, na.rm=T))
+
+# what prop report cohabitating prior to sex 
+preCsex <- marcohSvy %>% 
+  filter(!is.na(preCohabSex)) %>%
+  group_by(preCohabSex) %>%
+  summarize(prop=survey_mean())
+
+#histogram of raw #s
+marcohs %>%
+  ggplot(aes(x = timetoCohab/12, weights = weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(-10,10)) +
+  ggtitle("Time to Cohabitation from Initiation of Sexual Contact")
+
+
+
+```
+
+#### Mean Years to Cohabitation      
+`r kable(otc, format="html")`  
+
+
+#### Mean Years to Cohabitation-cohab after sex only    
+`r kable(otcp, format="html")`  
+
+
+#### Mean Years to Cohabitation-cohab before sex only   
+`r kable(otcn, format="html")`  
+
+
+#### Pre-Cohab Sex?    
+`r kable(preCsex[,1:2], format="html")`  
+
+
+
+### Current Cohabs ONLY 
+```{r rt-currentcohabs, echo=FALSE}
+egosCohabs <- egodat$egos[which(egodat$egos$ego %in% egodat$altersCohabs$ego),]
+
+cohabs <- merge(egodat$altersCohabs, egosCohabs[,c("ego", "CMINTVW", "cmcohab")], by="ego")
+cohabs <- cohabs %>% 
+            filter(!is.na(cmcohab)) %>%
+            mutate(cmstart = CMINTVW-dfs) %>%
+            mutate(timetoCohab = cmcohab-cmstart) %>%
+            mutate(preCohabSex = ifelse(timetoCohab>0, "yes", 
+                       ifelse(timetoCohab==0, "at cohab",
+                       ifelse(timetoCohab <0, "no", NA))))
+
+cohabSvy <- as_survey_design(cohabs, weights = weight, ids=ego)
+
+# other to cohab
+otco <- cohabSvy %>% summarize(meanTime = survey_mean(timetoCohab/12, na.rm=T))
+
+# if you limit to only those who report positive
+otcop <- cohabSvy %>% filter(timetoCohab > 0) %>%
+  summarize(meanTime = survey_mean(timetoCohab/12, na.rm=T))
+
+# if you limit to only those who report negative
+otcon <- cohabSvy %>% filter(timetoCohab < 0) %>%
+  summarize(meanTime = survey_mean(timetoCohab/12, na.rm=T))
+
+preCsex2 <- cohabSvy %>% 
+  filter(!is.na(preCohabSex)) %>%
+  group_by(preCohabSex) %>%
+  summarize(prop=survey_mean())
+
+#histogram of raw #s
+cohabs %>%
+  ggplot(aes(x = timetoCohab/12, weights = weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(-10,10)) +
+  ggtitle("Time to Cohabitation from Initiation of Sexual Contact")
+```
+
+#### Mean Years to Cohabitation  
+`r kable(otco, format="html")`   
+
+#### Mean Years to Cohabitation-cohab after sex only    
+`r kable(otcop, format="html")`  
+
+#### Mean Years to Cohabitation-cohab before sex only     
+`r kable(otcon, format="html")`   
+
+#### Pre-Cohab Sex?    
+`r kable(preCsex2[,1:2], format="html")`
+
+
+
+### Cohab to Marriage 
+```{r rt-cohabtomarraige, echo=FALSE}
+egosmarr <- egodat$egos[which(egodat$egos$ego %in% egodat$altersMarriages$ego),]
+
+marrs <- merge(egodat$altersMarriages, egosmarr[,c("ego", "CMINTVW", "cmcohab", "cmmarr")], by="ego")
+
+marrs <- marrs %>% 
+  mutate(pmcohab = ifelse(is.na(cmcohab), "no", "yes")) %>%
+  mutate(cmstart = CMINTVW-dfs) %>%
+  mutate(cohabtoMarr = cmmarr-cmcohab) %>%
+  mutate(othertoMarr = cmmarr-cmstart)
+
+marrSvy <- as_survey_design(marrs, weights = weight, ids=ego)
+
+# how many people report cohabitating pre-maritally?
+pmc <- marrSvy %>% group_by(pmcohab) %>% summarize(prop = survey_mean())
+
+# cohab to marriage
+ctm <- marrSvy %>% summarize(meanYears = survey_mean(cohabtoMarr/12, na.rm=T))
+```
+
+#### Pre-Marital Cohabitation  
+`r kable(pmc, "html")`
+
+#### Mean time cohab to marriage
+`r kable(ctm, "html")`  
+
+
+```{r marrhist, echo=FALSE}
+#histogram of raw #s
+marrs %>%
+  filter(!is.na(cohabtoMarr)) %>%
+  ggplot(aes(x = cohabtoMarr/12, weights = weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,10)) +
+  ggtitle("Time to Marriage from Initial Cohab")
+```
+
+
+
+### Other to Marriage
+```{r rt-othertomarraige, echo=FALSE}
+# other to marriage
+otm <- marrSvy %>% summarize(meanYears = survey_mean(othertoMarr/12, na.rm=T))
+
+kable(otm, "html")
+
+
+#histogram of raw #s
+marrs %>%
+  ggplot(aes(x = othertoMarr/12, weights = weight)) +
+  geom_histogram(binwidth = 0.5) +
+  scale_x_continuous(name="years", limits = c(0,10)) +
+  ggtitle("Time to Marriage from Initiation of Sexual Contact")
+```
+
+
+
+
+## Inst Partners 
+average number of inst partners per year per person by sex and age/agecat
+
+### All alters
+(mean one-times in last year by sex, race, agecat- inactive one-time partners)
+```{r one-times, echo=FALSE}
+inst_agecat <- svy %>% 
+  filter(age < 30) %>%
+  filter(HADSEX==1) %>% 
+  group_by(sex, agecat) %>% 
+  summarize(mean = survey_mean(instyr)) %>% 
+  dcast(sex~agecat, value.var = "mean")
+
+kable(inst_agecat, caption = "By Sex & Ego Race") %>% 
+  kable_styling(full_width = F, bootstrap_options = "striped", position="left")
+
+
+inst_age <- svy %>% 
+  filter(age < 30) %>%
+  filter(HADSEX==1) %>% 
+  group_by(sex, age) %>% 
+  summarize(mean = survey_mean(instyr)) %>% 
+  mutate(mean = round(mean, 3)) %>%
+  dcast(sex~age, value.var = "mean")
+
+kable(inst_age, caption = "By Sex & Ego Race") %>% 
+  kable_styling(full_width = F, bootstrap_options = "striped", position="left")
+```
+
+
+### All alters
+(mean one-times in last year by sex, race, agecat- inactive one-time partners)
+```{r one-times2, echo=FALSE}
+inst_agecat <- svy %>% 
+  filter(age < 30) %>%
+  filter(HADSEX==1) %>% 
+  group_by(sex, agecat) %>% 
+  summarize(mean = survey_mean(instyr.young)) %>% 
+  dcast(sex~agecat, value.var = "mean")
+
+
+kable(inst_agecat, caption = "By Sex & Ego AgeCat") %>% 
+  kable_styling(full_width = F, bootstrap_options = "striped", position="left")
+
+
+inst_age <- svy %>% 
+  filter(age < 30) %>%
+  filter(HADSEX==1) %>% 
+  group_by(sex, age) %>% 
+  summarize(mean = survey_mean(instyr.young)) %>% 
+  dcast(sex~age, value.var = "mean")
+
+kable(inst_age, caption = "By Sex & Ego Age") %>% 
+  kable_styling(full_width = F, bootstrap_options = "striped", position="left")
+```

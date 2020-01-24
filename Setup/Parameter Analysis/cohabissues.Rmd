@@ -1,0 +1,56 @@
+---
+title: "Untitled"
+author: "Emily Pollock"
+date: "10/31/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+let's deal with these cohab issues
+basically are people really reporting cohabitation prior to sex initiation 
+and is mode of dist really sex initiation AT cohab
+or did I fuck something up in the analysis 
+
+cmcohab = ego variable for "century month of cohabitation for current cohabitating partner"
+
+but 
+
+```{r cohab-data, echo=FALSE}
+nsfg <- readRDS("~/NSFG_DATA/Full/nsfg_complete.rds")
+nsfg <- nsfg %>%
+  mutate(sex = as.factor(sex), 
+         age = as.factor(age), 
+         hadsex = as.factor(HADSEX),
+         ssany = as.factor(ifelse(SAMESEXANY==1, 1, 2)))
+
+svy <- as_survey_design(nsfg, weights = weight, ids = ego)
+
+# egodata
+egodat <- readRDS("~/NSFG_DATA/Objects/fullEgodata.rds")
+
+# first attempt to get these data 
+```
+
+```{r tabs, echo=FALSE}
+egosCM <- egodat$egos[which(egodat$egos$ego %in% egodat$altersMarCoh$ego),]
+
+marcohs <- merge(egodat$altersMarCoh, egosCM[,c("ego", "CMINTVW", "cmcohab")], by="ego")
+
+marcohs <- marcohs %>% 
+            filter(!is.na(cmcohab)) %>%
+            mutate(cmstart = CMINTVW-dfs) %>%
+            mutate(timetoCohab = cmcohab-cmstart) %>%
+            mutate(preCohabSex = ifelse(timetoCohab>0, "yes", 
+                       ifelse(timetoCohab==0, "at cohab",
+                       ifelse(timetoCohab <0, "no", NA))))
+
+marcohs %>% group_by(sex, optype) %>% count()
+
+marcohs_neg <- marcohs %>% filter(timetoCohab < 0)
+
+marcohs_neg %>% group_by(sex, optype) %>% count()
+
+```

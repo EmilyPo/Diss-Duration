@@ -1,0 +1,103 @@
+---
+title: "ergm.ego issue"
+author: "Emily Pollock"
+date: "11/14/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(ergm.ego)
+library(tidyverse)
+```
+
+```{r session}
+sessionInfo()
+```
+
+```{r example, error=TRUE}
+# data
+dat <- readRDS("~/NSFG_DATA/Objects/fullEgodata.rds")
+
+#all alters
+egodat <- egodata(egos=dat$egos, alters=dat$altersAllActive, egoWt = dat$egos$weight, egoIDcol = "ego")
+
+# marriage/cohab alters
+egodat_marcoh <- egodata(egos=dat$egos, alters=dat$altersMarCoh, egoWt = dat$egos$weight, egoIDcol = "ego")
+
+egodat_other <- egodata(egos=dat$egos, alters=dat$altersOther, egoWt = dat$egos$weight, egoIDcol = "ego")
+```
+
+# ergm.ego issue with attribute that only exists for ego 
+
+want: formation in "marriage/cohab" network influenced by degree in "other" network  
+
+main problem: get odd error   
+
+solved!   
+
+solution: only keep deg.other.0 and deg.other.1  
+
+why? there are so many far fewer egos with degree 2 or 3 in "other" category that ergm throws an error  
+
+```{r counts}
+egodat_marcoh$egos %>% group_by(deg.other) %>% count()
+```
+
+__version 1, where we use the default and nodefactor only drops the first category:__
+
+```{r v1, error=TRUE}
+fit.marcoh.nodecov <- ergm.ego(egodat_marcoh ~ edges + 
+                                 nodecov("age") + 
+                                 absdiff("sqrtage") + 
+                                 nodefactor("deg.other") +
+                                 offset(nodematch("sex", diff = FALSE)) +
+                                 offset("concurrent"), 
+                                offset.coef = c(-Inf, -Inf),
+                                control = control.ergm.ego(ppopsize = 5000))
+```
+
+__version 2, where it runs but ultimately estimation fails__  
+
+(my guess is that so few nodes who have marraiges / cohabs also have other relationships that we don't actually need this term)
+
+```{r v2, error=TRUE}
+fit.marcoh.nodecov2 <- ergm.ego(egodat_marcoh ~ edges + 
+                                 nodecov("age") + 
+                                 absdiff("sqrtage") + 
+                                 nodefactor("deg.other", levels=c(1:2)) +
+                                 offset(nodematch("sex", diff = FALSE)) +
+                                 offset("concurrent"), 
+                                offset.coef = c(-Inf, -Inf),
+                                control = control.ergm.ego(ppopsize = 5000))
+```
+
+__"other" network example__  
+
+```{r counts3}
+egodat_marcoh$egos %>% group_by(deg.marcoh) %>% count()
+```
+  
+version 1
+```{r v-other, error=TRUE}
+fit.other.cov <- ergm.ego(egodat_other ~ edges + 
+                        nodecov("age") + 
+                        absdiff("sqrtage") + 
+                        concurrent +
+                        nodefactor("deg.marcoh") +
+                        offset(nodematch("sex", diff = FALSE)),
+                        offset.coef = c(-Inf),
+                        control = control.ergm.ego(ppopsize = 10000))
+```
+  
+  
+version 2
+```{r v2-other, error=TRUE}
+fit.other.cov <- ergm.ego(egodat_other ~ edges + 
+                        nodecov("age") + 
+                        absdiff("sqrtage") + 
+                        concurrent +
+                        nodefactor("deg.marcoh", levels=c(1:2)) +
+                        offset(nodematch("sex", diff = FALSE)),
+                        offset.coef = c(-Inf),
+                        control = control.ergm.ego(ppopsize = 10000))
+```

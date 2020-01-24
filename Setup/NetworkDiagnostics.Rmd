@@ -1,0 +1,182 @@
+---
+title: "Full Network Diagnostics - Final Network Ests"
+author: "Emily Pollock"
+date: "1/22/2020"
+output:
+    html_document:
+        toc: true
+        toc_depth: 3
+        toc_float: true
+        number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ergm.ego)
+library(EpiModel)
+library(DT)
+
+# load function for converting ergm.ego object to netest
+source("~/Documents/Dissertation/R/Duration/Functions/netest_conversion.R")
+
+# load ergm.ego objects 
+marcoh <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/final/fit.marcoh.RDS")
+other <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/final/fit.other.RDS")
+
+##### generate and save out netests ########
+# dissolution params - other
+# diss <- ~offset(edges)
+# convert from years to weeks
+# duration <- 1.824 * 52
+# death rate
+# drate <- 3.5e-5
+
+# dissolution params - marcoh
+# diss.m <- ~offset(edges)
+# convert from years to weeks
+# duration.m <- 8.914 * 52
+
+
+# all together now 
+# oef.diss <- dissolution_coefs(dissolution=diss, duration=duration, d.rate=drate)
+#coef.diss.m <- dissolution_coefs(dissolution=diss.m, duration=duration.m, d.rate=drate)
+
+# otherNetest <- ee.netest(other, coef.diss)
+# marcohNetest <- ee.netest(marcoh, coef.diss.m)
+
+# saveRDS(otherNetest, "~/Documents/Dissertation/R/Duration/Setup/fits/final/otherNetest.rds")
+# saveRDS(marcohNetest, "~/Documents/Dissertation/R/Duration/Setup/fits/final/marcohNetest.rds")
+
+
+##### load netests & combine ####
+otherNetest <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/final/otherNetest.rds")
+marcohNetest <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/final/marcohNetest.rds")
+
+# netests <- list(marcohNetest, otherNetest)
+
+# saveRDS(netests, "~/Documents/Dissertation/R/Duration/Setup/fits/final/CombinedNetworkFits.rds")
+
+```
+
+## Marriage/Cohab Network   
+
+### Coefs  
+```{r echo=FALSE}
+MarcohCoefs <- as.data.frame(round(marcoh$coef, 4))
+datatable(MarcohCoefs) 
+```
+
+### MCMC Diagnostics  
+```{r marcoh-mcmc, warning = F, comment = F, results='hide', fig.keep='all'}
+mcmc.diagnostics(marcoh)
+plot(gof(marcoh))
+plot(gof(marcoh, GOF="degree"))
+```
+
+### Static Diagnostics 
+```{r marcoh-dx-static, echo=FALSE}
+#dx.m.static <- netdx(marcohNetest, nsims = 1e4, dynamic = FALSE,
+#                    nwstats.formula = ~edges + 
+#                                       nodecov("age") + 
+#                                       absdiff("sqrtage") + 
+#                                       nodematch("male") +
+#                                       nodefactor("deg.other.binary") +
+#                                       nodefactor("debuted") + 
+#                                       meandeg + 
+#                                       concurrent)
+
+# saveRDS(dx.m.static, "~/Documents/Dissertation/R/Duration/Setup/fits/final/diagnostics/dxmstatic.rds")
+dx.m.static <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/final/diagnostics/dxmstatic.rds")
+```
+
+```{r plot-marcoh-static}
+dx.m.static
+
+plot(dx.m.static, method = "b")
+```
+
+### Dynamic Diagnostics  
+```{r marcoh-dx-dynamic, echo=FALSE}
+# dx.m.dynamic <- netdx(marcohNetest, nsims = 5, nsteps = 10000,
+#                     nwstats.formula = ~edges + 
+#                     nodecov("age") + 
+#                     absdiff("sqrtage") + 
+#                     nodematch("male") +
+#                     nodefactor("debuted") + meandeg + concurrent,
+#                     set.control.ergm = control.simulate.ergm(MCMC.burnin = 1e6, MCMC.interval=1e5))
+
+# saveRDS(dx.m.dynamic, "~/Documents/Dissertation/R/Duration/Setup/fits/final/diagnostics/dxmdynamic.rds")
+dx.m.dynamic <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/final/diagnostics/dxmdynamic.rds")
+```
+
+```{r plot-marcoh-dynamic}
+dx.m.dynamic
+
+plot(dx.m.dynamic)
+
+plot(dx.m.dynamic, type = "dissolution", qnts.col = "orange2")
+plot(dx.m.dynamic, type = "dissolution", method = "b", col = "bisque")
+```
+<br>  
+
+## Other Network  
+
+### Coefs
+```{r echo=FALSE}
+OtherCoefs <- as.data.frame(round(other$coef, 4))
+datatable(OtherCoefs) 
+```
+
+### MCMC Diagnostics  
+```{r other-mcmc, warning = F, comment = F, results='hide', fig.keep='all'}
+mcmc.diagnostics(other)
+plot(gof(other))
+plot(gof(other, GOF="degree"))
+```
+
+### Static Diagnostics  
+```{r other-dx-static, echo=FALSE}
+#dx.o.static <- netdx(otherNetest, nsims = 1e4, dynamic = FALSE,
+#                      nwstats.formula = ~edges + 
+#                                        nodecov("age") + 
+#                                        absdiff("sqrtage") + 
+#                                        nodematch("male") +
+#                                        nodefactor("deg.marcoh.binary") +
+#                                        nodefactor("debuted") + 
+#                                        meandeg + 
+#                                        concurrent)
+
+# saveRDS(dx.o.static, "~/Documents/Dissertation/R/Duration/Setup/fits/final/diagnostics/dxostatic.rds")
+dx.o.static <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/final/diagnostics/dxostatic.rds")
+```
+
+```{r plot-other-static}
+dx.o.static
+
+plot(dx.o.static, method = "b")
+```
+
+### Dynamic Diagnostics   
+```{r other-dynamic, echo=FALSE}
+#dx.o.dynamic <- netdx(otherNetest, nsims = 5, nsteps = 10000,
+#                     nwstats.formula = ~edges + 
+#                     nodecov("age") + 
+#                     absdiff("sqrtage") + 
+#                     nodematch("male") +
+#                     nodefactor("deg.marcoh.binary") +
+#                     nodefactor("debuted") + meandeg + concurrent,
+#                     set.control.ergm = control.simulate.ergm(MCMC.burnin = 1e6, MCMC.interval=1e5))
+
+# saveRDS(dx.o.dynamic, "~/Documents/Dissertation/R/Duration/Setup/fits/final/diagnostics/dxodynamic.rds")
+dx.o.dynamic <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/final/diagnostics/dxodynamic.rds")
+```
+
+```{r plot-other-dynamic}
+dx.o.dynamic
+
+plot(dx.o.dynamic)
+
+plot(dx.o.dynamic, type = "dissolution", qnts.col = "orange2")
+plot(dx.o.dynamic, type = "dissolution", method = "b", col = "bisque")
+```
+

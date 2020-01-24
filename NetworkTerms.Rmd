@@ -1,0 +1,502 @@
+---
+title: "Analysis for Network Terms"
+author: "Emily Pollock"
+date: "11/5/2019"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ergm.ego)
+library(tidyverse)
+library(DT)
+library(ggplot2)
+library(plotly)
+library(srvyr)
+library(reshape2)
+
+dat <- readRDS("~/NSFG_DATA/Objects/fullEgodata.rds")
+
+egodat_marcoh <- egodata(egos=dat$egos, alters=dat$altersMarCoh, egoWt = dat$egos$weight, egoIDcol = "ego")
+
+egodat_other <- egodata(egos=dat$egos, alters=dat$altersOther, egoWt = dat$egos$weight, egoIDcol = "ego")
+```
+
+deciding which ergm terms to use based on the data
+
+# Marriage / Cohab Network 
+
+## Propensity to form rels by age-related term  {.tabset .tabset-pills .tabset-fade}
+
+__couple options here:__  
+  
+nodefactor(age) - will give you one term for each age, not a good idea over such large age group  
+  
+nodefactor(agecat) = one term for each agecat - better, but really only good if each age cat has specific rates and not a general trend (if so see below)  
+  
+nodecov(age or agecat) - one term, assumes some monotonic rate of change between ages or agecats  
+
+strike nodefactor(age), too many terms
+
+let's look at new activity in last year by age and agecat
+
+### AgeCat
+
+```{r new-rels, echo=FALSE}
+newPartsWeighted <- function(dat, range) {
+  egos <- egodat_marcoh$egos$ego[which(egodat_marcoh$egos$agecat %in% range)]
+  alters <- egodat_marcoh$alters[which(egodat_marcoh$alters$ego %in% egos),]
+  
+  svy <- as_survey(alters, weights=weight, id=1)
+  
+  prop <- svy %>% 
+    mutate(yr = as.factor(ifelse(dfs <=12, 1, 0))) %>%
+    group_by(yr) %>% 
+    summarize(prop=survey_mean()) %>%
+    filter(yr %in% 1) %>%
+    select(-yr, -prop_se)
+  
+  return(prop)
+
+}
+
+partsW <- cbind(
+                newPartsWeighted(egodat_marcoh, "15-19"), 
+                newPartsWeighted(egodat_marcoh, "20-24"), 
+                newPartsWeighted(egodat_marcoh, "25-29"), 
+                newPartsWeighted(egodat_marcoh, "30-34"), 
+                newPartsWeighted(egodat_marcoh, "35-39"), 
+                newPartsWeighted(egodat_marcoh, "40-44"))
+
+colnames(partsW) <- c("15-19","20-24","25-29", "30-34", "35-39", "40-44")
+rownames(partsW) <- "Prop"
+barplot(as.matrix(partsW))
+datatable(round(partsW,3))
+
+```
+
+### Age
+
+```{r new-rels2, echo=FALSE}
+newParts2 <- function(dat, range){
+  
+  prop <- rep(0, length(range))
+  val <- 1
+  
+  for (i in range) {
+  egos <- dat$egos$ego[which(dat$egos$age == i)]
+  alters <- dat$alters[which(dat$alters$ego %in% egos),]
+  prop[val] <- nrow(alters[alters$dfs <= 12,])/nrow(alters)
+  val <- val +1
+  }
+  return(t(round(prop,3)))
+}
+
+parts2 <- newParts2(egodat_marcoh, 15:44)
+colnames(parts2) <- 15:44
+
+barplot(parts2)
+datatable(parts2)
+
+
+partsByAge <- function(dat, range){
+  
+  l <- rep(0, length(range))
+  val <- 1
+  
+  for (i in range) {
+  egos <- egodat_marcoh$egos$ego[which(egodat_marcoh$egos$age == i)]
+  alters <- egodat_marcoh$alters[which(egodat_marcoh$alters$ego %in% egos),]
+  
+  svy <- as_survey(alters, weights=weight, id=1)
+  
+  prop <- svy %>% 
+    mutate(yr = as.factor(ifelse(dfs <=12, 1, 0))) %>%
+    group_by(yr) %>% 
+    summarize(prop=survey_mean()) %>%
+    filter(yr %in% 1) %>%
+    select(-yr, -prop_se)
+  
+  l[val] <- prop[[1]]
+  
+  val <- val +1
+  }
+  
+  return(t(round(l,3)))
+} 
+
+
+parts3 <- partsByAge(egodat_marcoh, 15:44)
+colnames(parts3) <- 15:44
+
+barplot(parts3)
+datatable(parts3)
+
+```
+
+
+## Age Mixing {.tabset .tabset-pills .tabset-fade} 
+__options:__
+
+nodematch(agecat)
+absdiff / absdiffby (age / sqrt age?)
+
+### AgeCat
+
+
+```{r nodematch-marcoh, echo=FALSE}
+agemixF <- round(mixingmatrix(egodat_marcoh[egodat_marcoh$egos$sex %in% "F"], "agecat", rowprob = T), 2)
+amF <- melt(agemixF)
+amF$sex <- "F"
+
+agemixM <- round(mixingmatrix(egodat_marcoh[egodat_marcoh$egos$sex %in% "M"], "agecat", rowprob = T), 2)
+amM <- melt(agemixM)
+amM$sex <- "M"
+
+diags <- rbind(diag(agemixF), diag(agemixM))
+rownames(diags) <- c("F", "M")
+
+md <- melt(diags)
+colnames(md) <- c("sex", "agecat", "mix")
+
+diags_p <- ggplot(md, aes(agecat, mix, fill=sex)) +
+            geom_col() +
+            facet_wrap(~sex) +
+            ggtitle("Proportion of Within-Age-Group Ties")
+
+ggplotly(diags_p)
+
+datatable(diags, caption = "Within-Group Proportion of Ties")
+
+#am <-  rbind(amF, amM)
+
+#am %>% ggplot(aes(ego, alter)) + 
+#  geom_point(color="blue", alpha=0.2, aes(size=value)) +
+#  scale_size_area(max_size = 30) +
+#  geom_text(aes(label=round(value,2), size=0.015)) +
+#  theme(legend.position="none",
+#        axis.text.x = element_text(angle=45)) +
+#  coord_flip() +
+#  labs(title = "Age Mixing - All Active Mar/Cohs") +
+#  facet_wrap(~sex, ncol = 2)
+```
+
+### Age  
+
+
+```{r agemixing, echo=FALSE}
+egos <- egodat_marcoh$egos[,c("ego", "sex", "age", "sqrtage", "agesquared")]
+colnames(egos) <- c("ego", "e.sex", "e.age", "e.sqrtage", "e.agesquared")
+alters <- egodat_marcoh$alters[egodat_marcoh$alters$ego %in% egos$ego, 
+                               c("ego", "age", "sqrtage", "agesquared", "weight")]
+
+marcohs <- merge(alters, egos, by="ego")
+marcohs <- marcohs %>% mutate(diffsqrt = e.sqrtage-sqrtage,
+                              diffage = e.age-age,
+                              diffsquared = e.agesquared-agesquared)
+
+p1 <- ggplot(marcohs, aes(e.age,diffage, fill=e.sex)) +
+  geom_point() +
+  facet_wrap("e.sex") +
+  ggtitle("Diff in Age by Ego Age")
+
+ggplotly(p1)
+```
+
+### Sqrt Age 
+
+```{r sqrt-age, echo=FALSE}
+p2 <- ggplot(marcohs, aes(e.sqrtage, diffsqrt, fill=e.sex)) +
+  geom_point() +
+  facet_wrap("e.sex") +
+  ggtitle("Diff in SqrtAge by Sqrt Ego Age")
+
+ggplotly(p2)
+```
+
+### Age Squared 
+
+```{r age-squared, echo=FALSE}
+p3 <- ggplot(marcohs, aes(e.agesquared, diffsquared, fill=e.sex)) +
+  geom_point() +
+  facet_wrap("e.sex") +
+  ggtitle("Diff in Age Squared by Ego Age Squared")
+
+ggplotly(p3)
+```
+
+## Existing Relationships
+
+nodefactor(deg.other, base=?)
+
+```{r degdist, echo=FALSE}
+egos <- egodat_marcoh$egos
+
+egoSvy <- as_survey(egos, weights=weight, id=ego)
+
+dist <- egoSvy %>% 
+          filter(deg.marcoh < 2) %>%
+          mutate(deg.marcoh = as.factor(deg.marcoh),
+                 deg.other = as.factor(deg.other)) %>%
+          group_by(deg.marcoh, deg.other) %>% 
+          summarize(prop = survey_mean()) %>%
+          mutate(prop = round(prop,3)) %>%
+          select(-prop_se) %>%
+          spread(deg.other, prop)
+
+dist <- dist[,2:5]
+colnames(dist) <- c("Deg.Other.0", "Deg.Other.1", "Deg.Other.2", "Deg.Other.3")
+rownames(dist) <- c("Deg.Marcoh.0", "Deg.Marcoh.1")
+datatable(dist)
+```
+
+## Offsets
+
+sex, concurrent
+
+
+<br>
+# Other Network
+
+## Propensity to form rels by age-related term  {.tabset .tabset-pills .tabset-fade}
+
+__couple options here:__  
+  
+nodefactor(age) - will give you one term for each age, not a good idea over such large age group  
+  
+nodefactor(agecat) = one term for each agecat - better, but really only good if each age cat has specific rates and not a general trend (if so see below)  
+  
+nodecov(age or agecat) - one term, assumes some monotonic rate of change between ages or agecats  
+
+strike nodefactor(age), too many terms
+
+let's look at new activity in last year by age and agecat
+
+### AgeCat
+
+```{r new-rels-other, echo=FALSE}
+newPartsWeighted <- function(dat, range) {
+  egos <- egodat_other$egos$ego[which(egodat_other$egos$agecat %in% range)]
+  alters <- egodat_other$alters[which(egodat_other$alters$ego %in% egos),]
+  
+  svy <- as_survey(alters, weights=weight, id=1)
+  
+  prop <- svy %>% 
+    mutate(yr = as.factor(ifelse(dfs <=12, 1, 0))) %>%
+    group_by(yr) %>% 
+    summarize(prop=survey_mean()) %>%
+    filter(yr %in% 1) %>%
+    select(-yr, -prop_se)
+  
+  return(prop)
+
+}
+
+partsW <- cbind(
+                newPartsWeighted(egodat_marcoh, "15-19"), 
+                newPartsWeighted(egodat_marcoh, "20-24"), 
+                newPartsWeighted(egodat_marcoh, "25-29"), 
+                newPartsWeighted(egodat_marcoh, "30-34"), 
+                newPartsWeighted(egodat_marcoh, "35-39"), 
+                newPartsWeighted(egodat_marcoh, "40-44"))
+
+colnames(partsW) <- c("15-19","20-24","25-29", "30-34", "35-39", "40-44")
+rownames(partsW) <- "Prop"
+barplot(as.matrix(partsW))
+datatable(round(partsW,3))
+
+```
+
+### Age
+
+```{r new-rels2-other, echo=FALSE}
+newParts2 <- function(dat, range){
+  
+  prop <- rep(0, length(range))
+  val <- 1
+  
+  for (i in range) {
+  egos <- dat$egos$ego[which(dat$egos$age == i)]
+  alters <- dat$alters[which(dat$alters$ego %in% egos),]
+  prop[val] <- nrow(alters[alters$dfs <= 12,])/nrow(alters)
+  val <- val +1
+  }
+  return(t(round(prop,3)))
+}
+
+parts2 <- newParts2(egodat_other, 15:44)
+colnames(parts2) <- 15:44
+
+barplot(parts2)
+datatable(parts2)
+
+
+partsByAge <- function(dat, range){
+  
+  l <- rep(0, length(range))
+  val <- 1
+  
+  for (i in range) {
+  egos <- egodat_other$egos$ego[which(egodat_other$egos$age == i)]
+  alters <- egodat_other$alters[which(egodat_other$alters$ego %in% egos),]
+  
+  svy <- as_survey(alters, weights=weight, id=1)
+  
+  prop <- svy %>% 
+    mutate(yr = as.factor(ifelse(dfs <=12, 1, 0))) %>%
+    group_by(yr) %>% 
+    summarize(prop=survey_mean()) %>%
+    filter(yr %in% 1) %>%
+    select(-yr, -prop_se)
+  
+  l[val] <- prop[[1]]
+  
+  val <- val +1
+  }
+  
+  return(t(round(l,3)))
+} 
+
+
+parts3 <- partsByAge(egodat_other, 15:44)
+colnames(parts3) <- 15:44
+
+barplot(parts3)
+datatable(parts3)
+
+```
+
+<br>
+## Age Mixing {.tabset .tabset-pills .tabset-fade} 
+__options:__
+
+nodematch(agecat)
+absdiff / absdiffby (age / sqrt age?)
+
+### AgeCat
+
+
+```{r nodematch-marcoh-other, echo=FALSE}
+agemixF <- round(mixingmatrix(egodat_other[egodat_other$egos$sex %in% "F"], "agecat", rowprob = T), 2)
+amF <- melt(agemixF)
+amF$sex <- "F"
+
+agemixM <- round(mixingmatrix(egodat_other[egodat_other$egos$sex %in% "M"], "agecat", rowprob = T), 2)
+amM <- melt(agemixM)
+amM$sex <- "M"
+
+diags <- rbind(diag(agemixF), diag(agemixM))
+rownames(diags) <- c("F", "M")
+
+md <- melt(diags)
+colnames(md) <- c("sex", "agecat", "mix")
+
+diags_p <- ggplot(md, aes(agecat, mix, fill=sex)) +
+            geom_col() +
+            facet_wrap(~sex) +
+            ggtitle("Proportion of Within-Age-Group Ties")
+
+ggplotly(diags_p)
+
+datatable(diags, caption = "Within-Group Proportion of Ties")
+
+#am <-  rbind(amF, amM)
+
+#am %>% ggplot(aes(ego, alter)) + 
+#  geom_point(color="blue", alpha=0.2, aes(size=value)) +
+#  scale_size_area(max_size = 30) +
+#  geom_text(aes(label=round(value,2), size=0.015)) +
+#  theme(legend.position="none",
+#        axis.text.x = element_text(angle=45)) +
+#  coord_flip() +
+#  labs(title = "Age Mixing - All Active Mar/Cohs") +
+#  facet_wrap(~sex, ncol = 2)
+```
+
+### Age  
+
+
+```{r agemixing-other, echo=FALSE}
+egos <- egodat_other$egos[,c("ego", "sex", "age", "sqrtage", "agesquared")]
+colnames(egos) <- c("ego", "e.sex", "e.age", "e.sqrtage", "e.agesquared")
+alters <- egodat_other$alters[egodat_other$alters$ego %in% egos$ego, 
+                               c("ego", "age", "sqrtage", "agesquared", "weight")]
+
+others <- merge(alters, egos, by="ego")
+others <- others %>% mutate(diffsqrt = e.sqrtage-sqrtage,
+                              diffage = e.age-age,
+                              diffsquared = e.agesquared-agesquared)
+
+p1 <- ggplot(others, aes(e.age,diffage, fill=e.sex)) +
+  geom_point() +
+  facet_wrap("e.sex") +
+  ggtitle("Diff in Age by Ego Age")
+
+ggplotly(p1)
+```
+
+### Sqrt Age 
+
+```{r sqrt-age-other, echo=FALSE}
+p2 <- ggplot(others, aes(e.sqrtage, diffsqrt, fill=e.sex)) +
+  geom_point() +
+  facet_wrap("e.sex") +
+  ggtitle("Diff in SqrtAge by Sqrt Ego Age")
+
+ggplotly(p2)
+```
+
+### Age Squared 
+
+```{r age-squared-other, echo=FALSE}
+p3 <- ggplot(others, aes(e.agesquared, diffsquared, fill=e.sex)) +
+  geom_point() +
+  facet_wrap("e.sex") +
+  ggtitle("Diff in Age Squared by Ego Age Squared")
+
+ggplotly(p3)
+```
+<br>
+## Existing Relationships
+
+nodefactor(deg.other, base=?)
+
+```{r degdist-other, echo=FALSE}
+egos <- egodat_other$egos
+
+egoSvy <- as_survey(egos, weights=weight, id=ego)
+
+dist <- egoSvy %>% 
+          filter(deg.marcoh < 2) %>%
+          mutate(deg.marcoh = as.factor(deg.marcoh),
+                 deg.other = as.factor(deg.other)) %>%
+          group_by(deg.marcoh, deg.other) %>% 
+          summarize(prop = survey_mean()) %>%
+          mutate(prop = round(prop,3)) %>%
+          select(-prop_se) %>%
+          spread(deg.other, prop)
+
+dist <- dist[,2:5]
+colnames(dist) <- c("Deg.Other.0", "Deg.Other.1", "Deg.Other.2", "Deg.Other.3")
+rownames(dist) <- c("Deg.Marcoh.0", "Deg.Marcoh.1")
+datatable(dist)
+```
+# Decisions 
+
+## Marriage/Cohab Network
+1. nodecov(age) seems reasonable 
+2. absdiff(sqrtage)?
+3. nodefactor(deg.other, levels=-1)
+4. do i need a deg(0)?
+5. offsets: sex, concurrent
+
+## Other Network
+1. nodefactor(agecat, levels:c(1:2)) ? (keep 15:19 and 20:24)
+2. absdiff(sqrtage)
+3. nodefactor(deg.marcoh, levels=-1)
+4. do i need a deg(0)?
+5. offsets: sex

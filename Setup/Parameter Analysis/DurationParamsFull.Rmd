@@ -1,0 +1,741 @@
+---
+title: "More Data for Duration Sims"
+author: "Emily Pollock"
+date: "10/28/2019"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(plotly)
+library(srvyr)
+library(reshape2)
+library(kableExtra)
+library(ergm.ego)
+#library(scales)
+#library(DataCombine)
+library(DT)
+```
+```{r load-data, echo=FALSE}
+nsfg <- readRDS("~/NSFG_DATA/Full/nsfg_complete.rds") 
+nsfg <- nsfg %>%
+  mutate(sex = as.factor(sex), 
+         age = as.factor(age), 
+         hadsex = as.factor(HADSEX),
+         ssany = as.factor(ifelse(SAMESEXANY==1, 1, 2)),
+         sexage = ifelse(agefsex <= 14, 14, 
+                  ifelse(agefsex > 14, agefsex, NA)),
+         sexage = replace_na(sexage, 100))
+
+
+svy <- as_survey_design(nsfg, weights = weight, ids = ego)
+
+svy_unw <- as_survey_design(nsfg, weights = 1, ids = ego)
+
+#  egodata
+egodat <- readRDS("~/NSFG_DATA/Objects/fullEgodata.rds")
+```
+
+## Sexual Debut
+***  
+### Opposite-Sex Contact {.tabset .tabset-pills .tabset-fade}
+(var = hadsex)
+
+#### Overall {.tabset .tabset-pills .tabset-fade}
+##### Ever
+```{r debut, echo=FALSE}
+debut <- svy %>% 
+          group_by(sex, age, hadsex) %>% 
+          summarize(prop_debut = survey_mean()) %>%
+          mutate(prop_debut=round(prop_debut,3)) %>%
+          filter(hadsex==1) %>%
+          select(-hadsex, -prop_debut_se)
+
+p <-ggplot(debut, aes(x=age, y=prop_debut, group=sex)) +
+          geom_line(aes(color=sex)) +
+          labs(title="Proportion Debuted w/ Opposite Sex")
+  
+ggplotly(p) 
+
+# fit poisson curve to the data 
+
+# females
+#f1 <- glm(prop_debut ~ age, family = "logistic", data=debut[debut$sex=="F",])
+
+#summary(m1 <- glm(num_awards ~ prog + math, family="logistic", data=p))
+```
+
+##### In Last Year 
+```{r last-year, echo=FALSE}
+lastyr <- svy %>% 
+          mutate(osyr = as.factor(ifelse(osnpyr3 == 0, 0, 1))) %>%
+          group_by(sex, age, osyr) %>% 
+          summarize(prop_osyr = survey_mean()) %>%
+          mutate(prop_osyr=round(prop_osyr,3)) %>%
+          filter(osyr==1) %>%
+          select(-osyr, -prop_osyr_se)
+
+p <-ggplot(lastyr, aes(x=age, y=prop_osyr, group=sex)) +
+          geom_line(aes(color=sex)) +
+          labs(title="Proportion Had Sex w/ Opposite Sex in Last Year, ospyn")
+  
+
+ggplotly(p) 
+
+lastyrprts <- svy %>% 
+          mutate(partsyr3 = ifelse(is.na(partsyr3), 0, partsyr3)) %>%
+          mutate(osyr = as.factor(ifelse(partsyr3 == 0, 0, 1))) %>%
+          group_by(sex, age, osyr) %>% 
+          summarize(prop_osyr = survey_mean()) %>%
+          mutate(prop_osyr=round(prop_osyr,3)) %>%
+          filter(osyr==1) %>%
+          select(-osyr, -prop_osyr_se)
+
+p <-ggplot(lastyrprts, aes(x=age, y=prop_osyr, group=sex)) +
+          geom_line(aes(color=sex)) +
+          labs(title="Proportion Had Sex w/ Opposite Sex in Last Year, partsyr3")
+  
+
+ggplotly(p) 
+```
+
+##### Comparison
+```{r compare, echo=FALSE}
+both <- cbind(debut, lastyr[,3])
+bothF <- both %>%
+          filter(sex == "F") %>%
+          select(-sex) %>%
+          gather('prop_debut', 'prop_osyr', key = "type", value="prop")
+
+bothM <- both %>%
+          filter(sex == "M") %>%
+          select(-sex) %>%
+          gather('prop_debut', 'prop_osyr', key = "type", value="prop")
+
+
+p1 <- ggplot(bothF, (aes(x=age, y=prop, group=type))) + 
+        geom_line(aes(color=type)) +
+        ggtitle("Females, with ospyn vars")
+
+p2 <- ggplot(bothM, (aes(x=age, y=prop, group=type))) + 
+        geom_line(aes(color=type)) +
+        ggtitle("Males, with ospyn")
+
+ggplotly(p1);ggplotly(p2)
+
+both2 <- cbind(debut, lastyrprts[,3])
+bothF2 <- both2 %>%
+          filter(sex == "F") %>%
+          select(-sex) %>%
+          gather('prop_debut', 'prop_osyr', key = "type", value="prop")
+
+bothM2 <- both %>%
+          filter(sex == "M") %>%
+          select(-sex) %>%
+          gather('prop_debut', 'prop_osyr', key = "type", value="prop")
+
+
+p12 <- ggplot(bothF2, (aes(x=age, y=prop, group=type))) + 
+        geom_line(aes(color=type)) +
+        ggtitle("Females, with partsyr3")
+
+p22 <- ggplot(bothM2, (aes(x=age, y=prop, group=type))) + 
+        geom_line(aes(color=type)) +
+        ggtitle("Males, with partsyr3")
+
+ggplotly(p12);ggplotly(p22)
+
+```
+
+#### By Birth Cohort
+```{r debut2, echo=FALSE}
+
+debut2 <- svy %>% 
+          group_by(sex, birthcohort, hadsex) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) %>%
+          filter(hadsex==1)
+
+pd <-ggplot(debut2, aes(x=birthcohort, y=proportion, group=sex)) +
+          geom_line(aes(color=sex)) +
+          labs(title="Proportion Debuted w/ Opposite Sex")
+  
+
+ggplotly(pd) 
+
+```
+
+### Same Sex Contact {.tabset .tabset-pills .tabset-fade}
+
+#### Overall
+
+```{r sscontact-1, echo=FALSE, fig.align="center"}
+# overall average
+ssavg <- svy %>% 
+          filter(!is.na(ssany)) %>%
+          mutate(sexhist = as.factor(paste(hadsex,ssany, sep = ""))) %>% 
+          mutate(sexhist = factor(sexhist, labels = c("OS+SS", "OS Only", "SS Only", "No Sex"))) %>%
+          group_by(sex, sexhist) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3),
+                 proportion_se=round(proportion_se,3)) %>%
+          filter(sexhist %in% "SS Only" | sexhist %in% "OS+SS") 
+
+datatable(ssavg)
+```
+
+#### By Sex
+```{r ss-age, echo=FALSE}
+# by age
+ssany <- svy %>% 
+          filter(!is.na(ssany)) %>%
+          group_by(sex, age, ssany) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) %>%
+          filter(ssany==1)
+
+p2 <- ggplot(ssany, aes(x=age, y=proportion, fill=sex)) +
+        geom_col() +
+        labs(title="Proportion Reporting Any Same Sex Contact") + 
+        scale_x_discrete(breaks=seq(0,45,5)) +
+        facet_wrap(vars(sex))
+
+ggplotly(p2)
+```
+
+#### By Birth Cohort
+
+```{r sscontact-2, echo=FALSE, fig.align="center"}
+ssbc <- svy %>% 
+          filter(!is.na(ssany)) %>%
+          group_by(sex, birthcohort, ssany) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) %>%
+          filter(ssany==1)
+
+p3 <- ggplot(ssbc, aes(x=birthcohort, y=proportion, fill=sex)) +
+        geom_col() +
+        labs(title="Proportion Reporting Any Same Sex Contact", subtitle = "By Birth Cohort") + 
+        facet_wrap(vars(sex))
+
+ggplotly(p3)
+```
+
+#### By Opposite-Sex Contact
+
+```{r ss-3, echo=FALSE}
+ssos <- svy %>% 
+          filter(!is.na(ssany)) %>%
+          mutate(sexhist = as.factor(paste(hadsex,ssany, sep = ""))) %>% 
+          mutate(sexhist = factor(sexhist, labels = c("OS+SS", "OS Only", "SS Only", "No Sex"))) %>%
+          group_by(sex, age, sexhist) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) 
+
+
+#
+            
+            
+p4 <- ggplot(ssos, aes(x=age, y=proportion, fill=sexhist)) +
+        geom_col() +
+        scale_x_discrete(breaks=seq(0,45,5)) +
+        labs(title="Sex Experience", subtitle = "By Age") + 
+        facet_wrap(vars(sex))
+
+ggplotly(p4)
+
+# labels = c("OS+SS", "OS Only", "SS Only", "No Sex")
+
+ssos2 <- svy %>% 
+          filter(!is.na(ssany)) %>%
+          mutate(sexhist = as.factor(paste(hadsex,ssany, sep = ""))) %>% 
+          mutate(sexhist = factor(sexhist, labels = c("OS+SS", "OS Only", "SS Only", "No Sex"))) %>%
+          group_by(sex, birthcohort, sexhist) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) 
+
+p5 <- ggplot(ssos2, aes(x=birthcohort, y=proportion, fill=sexhist)) +
+        geom_col() +
+        labs(title="Sex Experience", subtitle = "By Birth Cohort") + 
+        facet_wrap(vars(sex))
+
+ggplotly(p5)
+```
+
+
+#### SS Contact Only 
+
+```{r ss-4, echo=FALSE}
+# by age
+sso <- svy %>% 
+          filter(!is.na(ssany)) %>%
+          mutate(sexhist = as.factor(paste(hadsex,ssany, sep = ""))) %>% 
+          mutate(sexhist = factor(sexhist, labels = c("OS+SS", "OS Only", "SS Only", "No Sex"))) %>%
+          group_by(sex, age, sexhist) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) %>%
+          filter(sexhist %in% "SS Only")
+            
+p6 <- ggplot(sso, aes(x=age, y=proportion, fill=sex)) +
+        geom_col() +
+        scale_x_discrete(breaks=seq(0,45,5)) +
+        labs(title="SS-Only Experience", subtitle = "By Age") + 
+        facet_wrap(vars(sex))
+
+ggplotly(p6)
+
+#by birth cohort 
+ssobc <- svy %>% 
+          filter(!is.na(ssany)) %>%
+          mutate(sexhist = as.factor(paste(hadsex,ssany, sep = ""))) %>% 
+          mutate(sexhist = factor(sexhist, labels = c("OS+SS", "OS Only", "SS Only", "No Sex"))) %>%
+          group_by(sex, birthcohort, sexhist) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) %>%
+          filter(sexhist %in% "SS Only")
+            
+p7 <- ggplot(ssobc, aes(x=birthcohort, y=proportion, fill=sex)) +
+        geom_col() +
+        scale_x_discrete(breaks=seq(0,45,5)) +
+        labs(title="SS-Only Experience", subtitle = "By Birth Cohort") + 
+        facet_wrap(vars(sex))
+
+ggplotly(p7)
+```
+
+
+
+
+
+```{r het-last-year, echo=FALSE}
+
+
+
+```
+
+
+## Sexual Debut - Probability by Age 
+
+age 14 = those who debuted before or at age 14
+age 100 = those who have never debuted w/ opposite sex
+
+go back and remind myself how "agefsex"
+
+```{r debut-by-age, echo=FALSE}
+# what we want is not the cumulative probabiltiy that someone in the population has debuted by a certain age, but instead the probability that a person debuts AT a certain age 
+
+debut_age <- svy %>% 
+          mutate(sexage = as.factor(sexage)) %>%
+          group_by(sex, sexage) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) 
+
+pda <-ggplot(debut_age, aes(x=sexage, y=proportion, group=sex)) +
+          geom_line(aes(color=sex)) +
+          labs(title="Proportion Who Debuted w/ Opposite Sex at Certain Age")
+
+ggplotly(pda) 
+
+debut_age2 <- debut_age %>% 
+  select(-proportion_se) %>%
+  spread(sex, proportion)
+
+datatable(debut_age2)
+```
+## Probs for model 
+```{r convert-to-weeks, echo=FALSE}
+# probability that someone debutes that year by age & sex
+prob_debut_year <- debut_age2[,2:3]
+
+adjDebutTable <- matrix(c(prob_debut_year$F[1:16], rep(0.001, 14),
+                          prob_debut_year$M[1:16], rep(0.001, 14)), byrow=T, nrow=2)
+
+# BUT now I need a different denominator - aka the number of people who hadn't debuted going into that age
+# i.e. 10% of all 16 year olds debut at age 16 but what is the proportion of 16 year olds that debut GIVEN that they were 15 year olds who didn't
+
+full_denoms <- svy %>% group_by(sex, age) %>% summarize(count = survey_total()) %>% select(count)
+
+# 10%*all16 = x*15nosex
+# x = (10%*all16)/15nosex
+
+debuted_denoms <- svy %>% filter(hadsex==1) %>% group_by(sex, age) %>% 
+  summarize(count = survey_total()) %>% select(count)
+
+allF <- full_denoms$count[1:30]
+allM <- full_denoms$count[31:60]
+
+debutedF <- debuted_denoms$count[1:30]
+debutedM <- debuted_denoms$count[31:60]
+
+nosexF <- allF-debutedF
+nosexM <- allM-debutedM
+ 
+adjprob <- function(debutvec, fullDenoms, nosexDenoms){
+  x <- NULL
+  for (i in 2:length(fullDenoms)){
+    p <- debutvec[i]*fullDenoms[i]/nosexDenoms[i-1]
+    x <- c(x, p)  
+  }
+  return(x)
+}
+
+prob1644_F <- adjprob(adjDebutTable[1,], allF, nosexF)
+prob1644_M <- adjprob(adjDebutTable[2,], allM, nosexM)
+prob1644 <- matrix(c(prob1644_F, prob1644_M), byrow=T, nrow=2)
+
+allprobs[,1] <- adjDebutTable[,1]
+allprobs[,2:30] <- prob1644
+
+# probability that someone debuts per week
+prob_debut_week <- 1-(1-allprobs)^(1/52)
+```
+
+
+
+
+## Age Dist of Never Sex  
+```{r neversexdist, echo=FALSE, eval=FALSE}
+neverdebut_age <- svy %>% 
+          filter(HADSEX == 0) %>% 
+          group_by(sex, age, na.rm=F) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) 
+
+npda <-ggplot(neverdebut_age, aes(x=age, y=proportion, group=sex)) +
+          geom_line(aes(color=sex)) +
+          labs(title="Proportion Who Have Never Debuted w/ Opposite Sex at Certain Age")
+
+ggplotly(npda) 
+```
+
+## Distribution at Cross-Section  
+***  
+what proportion of all rels are marriages, cohabs, others at cross-section?
+
+```{r prop-rels, echo=FALSE}
+actives <- egodat$altersAllActive
+
+aSvy <- as_survey_design(actives, weights = weight, ids=ego)
+
+rels <- aSvy %>% 
+  group_by(reltype) %>% 
+  summarize(prop = survey_mean()) %>% 
+  mutate(prop = round(prop,3),
+         prop_se = round(prop_se, 5))
+
+datatable(rels, caption = "Proportion of RelType - Active Rels")
+```
+
+
+## Relationship Transitions {.tabset .tabset-pills .tabset-fade}
+***  
+### Other to Cohab {.tabset .tabset-pills .tabset-fade}
+
+time between rel start and cohabitation
+
+#### Current Cohabs or Marriages 
+
+(marraiges who cohabitated premaritally)  
+```{r rt-currentcohabsandmarrs, echo=FALSE, message=FALSE, warning=FALSE}
+egosCM <- egodat$egos[which(egodat$egos$ego %in% egodat$altersMarCoh$ego),]
+
+marcohs <- merge(egodat$altersMarCoh, egosCM[,c("ego", "CMINTVW", "cmcohab")], by="ego")
+
+marcohs <- marcohs %>% 
+            filter(!is.na(cmcohab)) %>%
+            mutate(cmstart = CMINTVW-dfs) %>%
+            mutate(timetoCohab = cmcohab-cmstart) %>%
+            mutate(preCohabSex = ifelse(timetoCohab>0, "yes", 
+                       ifelse(timetoCohab==0, "at cohab",
+                       ifelse(timetoCohab <0, "no", NA))))
+
+
+marcohSvy <- as_survey_design(marcohs, weights = weight, ids=ego)
+
+#histogram of raw #s
+#marcohs %>%
+#  ggplot(aes(x = timetoCohab/12, weights = weight)) +
+#  geom_histogram(binwidth = 1/12) +
+#  scale_x_continuous(name="years", limits = c(-10,10)) +
+#  ggtitle("Time to Cohabitation from Initiation of Sexual Contact", subtitle = "bin width = 1 month") 
+
+marcohs %>%
+  ggplot(aes(x = timetoCohab/12, weights = weight)) +
+  geom_density() +
+  scale_x_continuous(name="years", limits = c(-10,10)) +
+  ggtitle("Time to Cohabitation from Initiation of Sexual Contact", subtitle = "bin width = 1 month") 
+
+# other to cohab (either current cohab or current marriage)
+otc <- marcohSvy %>% summarize(meanYears = survey_mean(timetoCohab/12, na.rm=T))
+
+# if you limit to only those who report positive
+otcp <- marcohSvy %>% filter(timetoCohab > 0) %>%
+  summarize(meanYears = survey_mean(timetoCohab/12, na.rm=T))
+
+# if you limit to only those who report negative
+otcn <- marcohSvy %>% filter(timetoCohab < 0) %>%
+  summarize(meanYears = survey_mean(timetoCohab/12, na.rm=T))
+
+otc_dt <- rbind(otc, otcp, otcn) 
+rownames(otc_dt) <- c("All Other->Cohab", "Only Positive Time", "Only Negative Time")
+otc_dt <- round(otc_dt, 3)
+
+datatable(otc_dt, caption = "Mean time to cohabitation")
+
+# what prop report cohabitating prior to sex 
+preCsex <- marcohSvy %>% 
+  filter(!is.na(preCohabSex)) %>%
+  group_by(preCohabSex) %>%
+  summarize(prop=survey_mean()) %>%
+  mutate(prop = round(prop,3),
+         prop_se = round(prop,3))
+
+datatable(preCsex, caption = "Do you report sex before cohab?")
+```
+
+
+#### Current Cohabs ONLY 
+```{r rt-currentcohabs, echo=FALSE, warning=FALSE}
+egosCohabs <- egodat$egos[which(egodat$egos$ego %in% egodat$altersCohabs$ego),]
+
+cohabs <- merge(egodat$altersCohabs, egosCohabs[,c("ego", "CMINTVW", "cmcohab")], by="ego")
+cohabs <- cohabs %>% 
+            filter(!is.na(cmcohab)) %>%
+            mutate(cmstart = CMINTVW-dfs) %>%
+            mutate(timetoCohab = cmcohab-cmstart) %>%
+            mutate(preCohabSex = ifelse(timetoCohab>0, "yes", 
+                       ifelse(timetoCohab==0, "at cohab",
+                       ifelse(timetoCohab <0, "no", NA))))
+
+cohabSvy <- as_survey_design(cohabs, weights = weight, ids=ego)
+
+# other to cohab
+otco <- cohabSvy %>% summarize(meanTime = survey_mean(timetoCohab/12, na.rm=T))
+
+# if you limit to only those who report positive
+otcop <- cohabSvy %>% filter(timetoCohab > 0) %>%
+  summarize(meanTime = survey_mean(timetoCohab/12, na.rm=T))
+
+# if you limit to only those who report negative
+otcon <- cohabSvy %>% filter(timetoCohab < 0) %>%
+  summarize(meanTime = survey_mean(timetoCohab/12, na.rm=T))
+
+
+
+#histogram of raw #s
+#cohabs %>%
+#  ggplot(aes(x = timetoCohab/12, weights = weight)) +
+#  geom_histogram(binwidth = 0.5) +
+#  scale_x_continuous(name="years", limits = c(-10,10)) +
+#  ggtitle("Time to Cohabitation from Initiation of Sexual Contact")
+
+cohabs %>%
+  ggplot(aes(x = timetoCohab/12, weights = weight)) +
+  geom_density() +
+  scale_x_continuous(name="years", limits = c(-10,10)) +
+  ggtitle("Time to Cohabitation from Initiation of Sexual Contact")
+
+
+otco_dt <- rbind(otco, otcop, otcon) 
+rownames(otco_dt) <- c("All Other->Cohab", "Only Positive Time", "Only Negative Time")
+otc_dt <- round(otc_dt, 3)
+
+datatable(otco_dt, caption = "Mean time to cohabitation")
+
+preCsex <- cohabSvy %>% 
+  filter(!is.na(preCohabSex)) %>%
+  group_by(preCohabSex) %>%
+  summarize(prop=survey_mean()) %>%
+  mutate(prop = round(prop,3),
+         prop_se = round(prop,3))
+
+datatable(preCsex, caption = "Do you report sex before cohab?")
+
+```
+
+### Cohab to Marriage 
+```{r rt-cohabtomarraige, echo=FALSE}
+egosmarr <- egodat$egos[which(egodat$egos$ego %in% egodat$altersMarriages$ego),]
+
+marrs <- merge(egodat$altersMarriages, egosmarr[,c("ego", "CMINTVW", "cmcohab", "cmmarr")], by="ego")
+
+marrs <- marrs %>% 
+  mutate(pmcohab = ifelse(is.na(cmcohab), "no", "yes")) %>%
+  mutate(cmstart = CMINTVW-dfs) %>%
+  mutate(cohabtoMarr = cmmarr-cmcohab) %>%
+  mutate(othertoMarr = cmmarr-cmstart)
+
+marrSvy <- as_survey_design(marrs, weights = weight, ids=ego)
+
+# how many people report cohabitating pre-maritally?
+pmc <- marrSvy %>% group_by(pmcohab) %>% summarize(prop = survey_mean())
+
+# cohab to marriage
+ctm <- marrSvy %>% summarize(meanYears = survey_mean(cohabtoMarr/12, na.rm=T))
+
+datatable(pmc, caption = "Did you cohabitate pre-maritally?")
+
+datatable(ctm, caption = "Mean years to marriage from cohabitation")
+```
+
+```{r marrhist, echo=FALSE, warning=FALSE}
+#histogram of raw #s
+marrs %>%
+  filter(!is.na(cohabtoMarr)) %>%
+  ggplot(aes(x = cohabtoMarr/12, weights = weight)) +
+  geom_density() +
+  scale_x_continuous(name="years", limits = c(0,10)) +
+  ggtitle("Time to Marriage from Initial Cohab")
+```
+
+
+
+### Other to Marriage
+```{r rt-othertomarraige, echo=FALSE, warning=FALSE}
+# other to marriage
+otm <- marrSvy %>% summarize(meanYears = survey_mean(othertoMarr/12, na.rm=T))
+
+datatable(otm, caption = "Mean year to Marriage from Non-cohabitating relationship")
+
+
+#histogram of raw #s
+marrs %>%
+  ggplot(aes(x = othertoMarr/12, weights = weight)) +
+  geom_density() +
+  scale_x_continuous(name="years", limits = c(0,10)) +
+  ggtitle("Time to Marriage from Initiation of Sexual Contact")
+```
+
+
+## Relationship Length {.tabset .tabset-pills .tabset-fade}
+***
+
+mean of active relationships (where we assume exponential dist)
+plus
+estimates from survival analysis (using all reported relationships), exponential model fit 
+
+### Counterfactual Networks 
+
+```{r reldur-cf, echo=FALSE}
+
+expFit_cf <- readRDS(here("Survival_Analysis", "model_fits", "covs", "enetwork.rds")) 
+marcoh_mean <- 1/exp(coef(expFit_cf)[[1]])
+other_mean <- marcoh_mean*(1/exp(coef(expFit_cf)[[2]]))
+
+means <- as.data.frame(rbind(marcoh_mean, other_mean))
+means <- round(means/12, 2)
+colnames(means) <- c("Model Predictions")
+rownames(means) <- c("Marcoh", "Other")
+
+dat <- readRDS("~/NSFG_DATA/Objects/alters_active.rds")
+datsvy <- as_survey_design(dat, weights = weight, ids=ego)
+
+means2 <- datsvy %>% 
+  group_by(network1) %>% 
+  summarize(DataMean = survey_mean(edge_age_month/12)) %>%
+  mutate(DataMean = round(DataMean,3)) %>%
+  select(-DataMean_se)
+
+tab <- cbind(means2[,2],means[1])
+colnames(tab) <- c("Data Means", "Model Predictions")
+
+datatable(tab)
+```
+
+### Transition Networks  
+
+```{r reldur-transition, echo=FALSE}
+
+expFit <- readRDS(here("Survival_Analysis", "model_fits", "covs", "ereltype.rds")) 
+cohab_mean <- 1/exp(coef(expFit)[[1]])
+spouse_mean <- cohab_mean*(1/exp(coef(expFit)[[2]]))
+other_mean <- cohab_mean*(1/exp(coef(expFit)[[3]]))
+
+means <- as.data.frame(rbind(cohab_mean, spouse_mean, other_mean))
+means <- round(means/12, 2)
+colnames(means) <- c("Model Predictions")
+rownames(means) <- c("Cohab", "Spouse", "Other")
+
+dat <- readRDS("~/NSFG_DATA/Objects/alters_active.rds")
+datsvy <- as_survey_design(dat, weights = weight, ids=ego)
+
+means2 <- datsvy %>% 
+  group_by(reltype) %>% 
+  summarize(DataMean = survey_mean(edge_age_month/12)) %>%
+  mutate(DataMean = round(DataMean,3)) %>%
+  select(-DataMean_se)
+
+tab <- cbind(means2[,2],means[1])
+colnames(tab) <- c("Data Means", "Model Predictions")
+
+datatable(tab)
+```
+
+## Pseudo-Population Size
+
+pavel recommends: 
+"For weighted data the pseudo-populations size should be at least $1 * sampleSize/smallestWeight$ (or $3 * sampleSize/smallestWeight$ to be safe), or 1000 (whichever is larger)."
+
+summary of NSFG weights:
+```{r sum-weights}
+summary(egodat$egos$weight)
+```
+
+NSFG sample size: `r length(egodat$egos$weight)`
+
+```{r ppop-size, echo=FALSE}
+ssize <- length(egodat$egos$weight)
+minweight <- min(egodat$egos$weight)
+```
+
+ppize for $1 * sampleSize/smallestWeight$ = `r round(ssize/minweight)`  
+<br>
+ppize for $3 * sampleSize/smallestWeight$ = `r round(3*(ssize/minweight))`  
+
+so round up to an even 3500 for estimation? 
+
+when ppop = 3500, you get actual ppop of ~500  
+and when ppop = 5000 you get actual pop of ~990 why?  
+
+
+
+
+## Age-Sex-Specific Mortality Rates
+
+raw data pulled from The National Vital Statistics Report [Life Tables for 2017](https://www.cdc.gov/nchs/data/nvsr/nvsr68/nvsr68_07-508.pdf) 
+
+```{r num-survivors, echo=FALSE}
+agecat <- c(15, 20, 25, 30, 35, 40)
+females <- c(99280, 99134, 98883, 98543, 98083, 97493, 96697)
+males <- c(99107, 98749, 98071, 97235, 96284, 95196, 93903)
+
+fdeaths <- c(females[1]-females[2], 
+             females[2]-females[3], 
+             females[3]-females[4],
+             females[4]-females[5],
+             females[5]-females[6],
+             females[6]-females[7])
+
+mdeaths <- c(males[1]-males[2], 
+             males[2]-males[3], 
+             males[3]-males[4],
+             males[4]-males[5],
+             males[5]-males[6],
+             males[6]-males[7])
+
+f_death_rate <- fdeaths/100000
+m_death_rate <- mdeaths/100000
+
+survivors <- data.frame(row.names=as.character(agecat), females[-7], males[-7], fdeaths, mdeaths, f_death_rate, m_death_rate)
+colnames(survivors) <- c("Survs, F", "Survs, M", "Deaths, F", "Deaths, M", "D Rate, F", "D Rate, M")
+
+datatable(survivors, caption="Survivors and Death Rates per 100,000 - 2017")
+```
+

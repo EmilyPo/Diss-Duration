@@ -1,0 +1,451 @@
+---
+title: "Counterfactual Estimation -- Relationship Duration Models"
+author: "Emily Pollock"
+date: "11/4/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# libs
+library(ergm.ego)
+library(EpiModel)
+
+# data
+dat <- readRDS("~/NSFG_DATA/Objects/fullEgodata.rds")
+
+# adjust attributes to what epimodelHIV will expect
+# sex = male 1 or 0
+dat$egos$male <- ifelse(dat$egos$sex %in% "F", 0, 1)
+dat$altersOther$male <- ifelse(dat$altersOther$sex %in% "F", 0, 1)
+dat$altersMarCoh$male <- ifelse(dat$altersMarCoh$sex %in% "F", 0, 1)
+# debuted = HADSEX
+dat$egos$debuted <- ifelse(dat$egos$HADSEX==1, 1, 0)
+
+# agecat, 1:6
+breaks <- c(15, 20, 25, 30, 35, 40, 45)
+dat$egos$agecat <- cut(dat$egos$age, breaks, labels=F, right=F)
+dat$altersOther$agecat <- cut(dat$altersOther$age, breaks, labels=F, right=F)
+dat$altersMarCoh$agecat <- cut(dat$altersMarCoh$age, breaks, labels=F, right=F)
+
+#all alters
+egodat <- egodata(egos=dat$egos, alters=dat$altersAllActive, egoWt = dat$egos$weight, egoIDcol = "ego")
+
+# marriage/cohab alters
+egodat_marcoh <- egodata(egos=dat$egos, alters=dat$altersMarCoh, egoWt = dat$egos$weight, egoIDcol = "ego")
+
+# other alters 
+egodat_other <- egodata(egos=dat$egos, alters=dat$altersOther, egoWt = dat$egos$weight, egoIDcol = "ego")
+```
+
+# model estimation using ergm.ego
+
+## Marriage/Cohab Network {.tabset .tabset-pills .tabset-fade}
+
+note that these models don't include a condition for degree in other network 
+
+### Fit w/ Nodecov(age) {.tabset .tabset-pills .tabset-fade}
+
+#### Pop = 5,000
+```{r marcoh-network}
+fit.marcoh.nodecovD <- ergm.ego(egodat_marcoh ~ edges + 
+                         nodecov("age") + 
+                         absdiff("sqrtage") + 
+                         offset(nodematch("male", diff = FALSE)) +
+                         offset("concurrent") +
+                         offset(nodefactor("debuted", levels=1)), 
+                         offset.coef = c(-Inf, -Inf, -Inf),
+                         control = control.ergm.ego(ppopsize = 5000))
+
+saveRDS(fit.marcoh.nodecov, "~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodecov.RDS")
+
+fit.marcoh.nodecov.5000 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodecov.RDS")
+
+summary(fit.marcoh.nodecov.5000)
+
+mcmc.diagnostics(fit.marcoh.nodecov.5000)
+
+plot(gof(fit.marcoh.nodecov.5000, GOF = "model"))
+
+plot(gof(fit.marcoh.nodecov.5000, GOF = "degree"))
+```
+
+#### Pop = 10,000
+```{r marcoh-network-10}
+fit.marcoh.nodecov.10 <- ergm.ego(egodat_marcoh ~ edges + 
+                         nodecov("age") + 
+                         absdiff("sqrtage") + 
+                         offset(nodematch("male", diff = FALSE)) +
+                         offset(nodefactor("debuted", levels=1)), 
+                         offset("concurrent"), 
+                         offset.coef = c(-Inf, -Inf),
+                         control = control.ergm.ego(ppopsize = 10000))
+
+saveRDS(fit.marcoh.nodecov.10, "~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodecov-10.RDS")
+
+fit.marcoh.nodecov.10 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodecov-10.RDS")
+
+summary(fit.marcoh.nodecov.10)
+
+mcmc.diagnostics(fit.marcoh.nodecov.10)
+
+plot(gof(fit.marcoh.nodecov.10, GOF = "model"))
+
+plot(gof(fit.marcoh.nodecov.10, GOF = "degree"))
+```
+
+#### Pop = 20,000
+```{r marcoh-network-20}
+fit.marcoh.nodecov.20 <- ergm.ego(egodat_marcoh ~ edges + 
+                         nodecov("age") + 
+                         absdiff("sqrtage") + 
+                         offset(nodematch("male", diff = FALSE)) +
+                         offset("concurrent"), 
+                         offset.coef = c(-Inf, -Inf),
+                         control = control.ergm.ego(ppopsize = 20000, ergm.control = control.ergm(MCMLE.maxit = 100)))
+
+saveRDS(fit.marcoh.nodecov.20, "~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodecov-20.RDS")
+
+fit.marcoh.nodecov.20 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodecov-20.RDS")
+
+summary(fit.marcoh.nodecov.20)
+
+mcmc.diagnostics(fit.marcoh.nodecov.20)
+
+plot(gof(fit.marcoh.nodecov.20, GOF = "model"))
+
+plot(gof(fit.marcoh.nodecov.20, GOF = "degree"))
+```
+
+
+### Fit w/ Nodefactor(agecat) {.tabset .tabset-pills .tabset-fade}
+#### Pop = 5,000
+```{r marcoh-nodefactor-5, echo=FALSE}
+fit.marcoh.nodefactor.5 <- ergm.ego(egodat_marcoh ~ edges + 
+                         nodefactor("agecat", levels=c(1:3)) +
+                         absdiff("sqrtage") + 
+                         offset(nodematch("male", diff = FALSE)) +
+                         offset("concurrent"), 
+                         offset.coef = c(-Inf, -Inf),
+                         control = control.ergm.ego(ppopsize = 5000))
+
+saveRDS(fit.marcoh.nodefactor.5, "~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodefactor-5.RDS")
+
+fit.marcoh.nodefactor.5 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodefactor-5.RDS")
+
+summary(fit.marcoh.nodefactor.5)
+
+mcmc.diagnostics(fit.marcoh.nodefactor.5)
+
+plot(gof(fit.marcoh.nodefactor.5, GOF = "model"))
+
+plot(gof(fit.marcoh.nodefactor.5, GOF = "degree"))
+
+```
+
+#### Pop = 10,000
+```{r marcoh-nodefactor-10, echo=FALSE}
+fit.marcoh.nodefactor.10 <- ergm.ego(egodat_marcoh ~ edges + 
+                         nodefactor("agecat", levels=c(1:3)) + 
+                         absdiff("sqrtage") + 
+                         offset(nodematch("male", diff = FALSE)) +
+                         offset("concurrent"), 
+                         offset.coef = c(-Inf, -Inf),
+                         control = control.ergm.ego(ppopsize = 10000))
+
+saveRDS(fit.marcoh.nodefactor.10, "~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodefactor-10.RDS")
+
+fit.marcoh.nodefactor.10 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodefactor-10.RDS")
+
+summary(fit.marcoh.nodefactor.10)
+
+mcmc.diagnostics(fit.marcoh.nodefactor.10)
+
+plot(gof(fit.marcoh.nodefactor.10, GOF = "model"))
+
+plot(gof(fit.marcoh.nodefactor.10, GOF = "degree"))
+```
+
+
+#### Pop = 20,000
+```{r marcoh-nodefactor-20, echo=FALSE}
+fit.marcoh.nodefactor.20 <- ergm.ego(egodat_marcoh ~ edges + 
+                         nodefactor("agecat", levels=c(1:3)) + 
+                         absdiff("sqrtage") + 
+                         offset(nodematch("male", diff = FALSE)) +
+                         offset("concurrent"), 
+                         offset.coef = c(-Inf, -Inf),
+                         control = control.ergm.ego(ppopsize = 20000, ergm.control = control.ergm(MCMLE.maxit = 100)))
+
+saveRDS(fit.marcoh.nodefactor.20, "~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodefactor-20.RDS")
+
+fit.marcoh.nodefactor.20 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/marcoh-nodefactor-20.RDS")
+
+summary(fit.marcoh.nodefactor.20)
+
+mcmc.diagnostics(fit.marcoh.nodefactor.20)
+
+plot(gof(fit.marcoh.nodefactor.20, GOF = "model"))
+
+plot(gof(fit.marcoh.nodefactor.20, GOF = "degree"))
+```
+
+## "Other" formation model:  {.tabset .tabset-pills .tabset-fade}
+
+note these models also don't have contrainst based on degree in marcoh network
+
+### Nodecov(age)
+```{r other-network-nodecov, echo=FALSE}
+fit.other.cov <- ergm.ego(egodat_other ~ edges + 
+                        nodecov("age") + 
+                        absdiff("sqrtage") + 
+                        concurrent +
+                        offset(nodematch("male", diff = FALSE)),
+                        offset.coef = c(-Inf),
+                        control = control.ergm.ego(ppopsize = 10000))
+
+saveRDS(fit.other.cov, "~/Documents/Dissertation/R/Duration/Setup/fits/other-nodecov.RDS")
+
+fit.other.cov <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/other-nodecov.RDS")
+
+summary(fit.other.cov)
+
+mcmc.diagnostics(fit.other.cov)
+
+plot(gof(fit.other.cov, GOF = "model"))
+
+plot(gof(fit.other.cov, GOF = "degree"))
+```
+
+### Nodefactor(agecat)
+```{r other-network, echo=FALSE}
+fit.other <- ergm.ego(egodat_other ~ edges + 
+                        nodefactor("agecat", levels=c(1:4)) + 
+                        absdiff("sqrtage") + 
+                        concurrent + 
+                        offset(nodematch("male", diff = FALSE)),
+                        offset.coef = c(-Inf),
+                        control = control.ergm.ego(ppopsize = 10000))
+
+saveRDS(fit.other, "~/Documents/Dissertation/R/Duration/Setup/fits/other.RDS")
+
+fit.other <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/other.RDS")
+
+summary(fit.other)
+
+mcmc.diagnostics(fit.other)
+
+plot(gof(fit.other, GOF = "model"))
+
+plot(gof(fit.other, GOF = "degree"))
+```
+
+
+# NetDX {.tabset .tabset-pills .tabset-fade}
+```{r netest-objs, echo=FALSE}
+# source JKB's function
+source("~/Documents/Dissertation/R/Duration/Setup/ee-netest.R")
+
+# need dissolution stuff
+
+#' # Single dissolution
+#' library(EpiModel)
+#' diss = ~offset(edges)
+#' coef.diss <- dissolution_coefs(dissolution = diss,
+#'                                duration = 400,
+#'                                d.rate = 3.5e-5)
+#'
+#' est <- ee.netest(egofit, coef.diss)
+#'
+#' # Netdx, static
+#' dx1 <- netdx(est, nsims = 1e4, dynamic = FALSE,
+#'              nwstats.formula = ~edges + meandeg + concurrent)
+#' dx1
+#' plot(dx1, method = "b", stats = c("edges", "concurrent"))
+#'
+#' # netdx, dynamic
+#' dx2 <- netdx(est, nsims = 5, nsteps = 500,
+#'              nwstats.formula = ~edges + meandeg + concurrent,
+#'              set.control.ergm = control.simulate.ergm(MCMC.burnin = 1e6))
+#' dx2
+#' plot(dx2, stats = c("edges", "meandeg"), plots.joined = FALSE)
+#' plot(dx2, type = "duration")
+#' plot(dx2, type = "dissolution", qnts.col = "orange2")
+#' plot(dx2, type = "dissolution", method = "b", col = "bisque")
+
+# marriage dissolution
+diss <- ~offset(edges)
+# convert from years to weeks
+duration <- 8.914 * 52
+# death rate
+drate <- 3.5e-5
+
+# all together now 
+coef.diss <- dissolution_coefs(dissolution=diss,
+                               duration=duration,
+                               d.rate=drate)
+```
+
+## MARCOH 10,000 node netwoks {.tabset .tabset-pills .tabset-fade}
+### Nodecov(age)
+#### Static 
+```{r netdx, echo=FALSE}
+marcohnetest <- ee.netest(fit.marcoh.nodecov.10, coef.diss)
+
+# Netdx, static
+dx1 <- netdx(marcohnetest, nsims = 1e4, dynamic = FALSE,
+  nwstats.formula = ~edges + meandeg + concurrent)
+
+saveRDS(dx1, "~/Documents/Dissertation/R/Duration/Setup/fits/dx-marcohNodecov.RDS")
+
+dx1 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/dx-marcohNodecov.RDS")
+
+dx1
+
+plot(dx1, method = "b", stats = c("edges", "concurrent"))
+```
+
+#### Dynamic  
+```{r netdx-marcohnodecov-dynamic, echo=FALSE}
+# netdx, dynamic
+dx2 <- netdx(marcohnetest, nsims = 5, nsteps = 5000,
+              nwstats.formula = ~edges + meandeg + concurrent + nodecov("age") + absdiff("sqrtage"),
+              set.control.ergm = control.simulate.ergm(MCMC.burnin = 1e6))
+
+saveRDS(dx2, "~/Documents/Dissertation/R/Duration/Setup/fits/dx-marcohNodecov-dynamic.RDS")
+
+dx2 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/dx-marcohNodecov-dynamic.RDS")
+               
+dx2
+
+plot(dx2, stats = c("edges", "meandeg", "nodecov.age", "absdiff.sqrtage"), plots.joined = FALSE)
+
+plot(dx2, type = "duration")
+plot(dx2, type = "dissolution", qnts.col = "orange2")
+#plot(dx2, type = "dissolution", method = "b", col = "bisque")
+```
+
+### Nodefactor(agecat)
+#### Static  
+```{r netdx-nodefactormarcoh, echo=FALSE}
+marcohnetest2 <- ee.netest(fit.marcoh.nodefactor.10, coef.diss)
+
+# Netdx, static
+dx3 <- netdx(marcohnetest2, nsims = 1e4, dynamic = FALSE,
+  nwstats.formula = ~edges + meandeg + concurrent)
+
+saveRDS(dx3, "~/Documents/Dissertation/R/Duration/Setup/fits/dx-marcohNodefactor.RDS")
+
+dx3 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/dx-marcohNodefactor.RDS")
+               
+dx3
+
+plot(dx3, method = "b", stats = c("edges", "concurrent"))
+```
+
+#### Dynamic  
+```{r netdx-marcohnodefactor-dynamic, echo=FALSE}
+# netdx, dynamic
+dx4 <- netdx(marcohnetest2, nsims = 5, nsteps = 5000,
+              nwstats.formula = ~edges + meandeg + concurrent + nodefactor("agecat", levels=c(1:3)) + absdiff("sqrtage"),
+              set.control.ergm = control.simulate.ergm(MCMC.burnin = 1e6))
+
+saveRDS(dx4, "~/Documents/Dissertation/R/Duration/Setup/fits/dx-marcohNodefactor-dynamic.RDS")
+
+dx4 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/dx-marcohNodefactor-dynamic.RDS")
+ 
+dx4
+
+plot(dx4, stats = c("edges", "meandeg", "nodefactor.agecat.1", "nodefactor.agecat.2", "nodefactor.agecat.3", "absdiff.sqrtage"), plots.joined = FALSE)
+
+plot(dx4, type = "duration")
+plot(dx4, type = "dissolution", qnts.col = "orange2")
+#plot(dx4, type = "dissolution", method = "b", col = "bisque")
+```
+
+
+## OTHER 10,000 node networks {.tabset .tabset-pills .tabset-fade}
+### Nodecov(age)
+#### Static
+```{r other-netdx, echo=FALSE}
+# other dissolution
+diss <- ~offset(edges)
+# convert from years to weeks
+duration <- 1.824 * 52
+# death rate
+drate <- 3.5e-5
+
+# all together now 
+coef.diss <- dissolution_coefs(dissolution=diss,
+                               duration=duration,
+                               d.rate=drate)
+
+otherNetest <- ee.netest(fit.other.cov, coef.diss)
+
+# Netdx, static
+dxstatic <- netdx(otherNetest, nsims = 1e4, dynamic = FALSE,
+  nwstats.formula = ~edges + meandeg + concurrent)
+
+saveRDS(dxstatic, "~/Documents/Dissertation/R/Duration/Setup/fits/dx-other-cov.RDS")
+
+dxstatic <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/dx-other-cov.RDS")
+               
+dxstatic
+
+plot(dxstatic, method = "b", stats = c("edges","concurrent"))
+```
+
+#### Dynamic
+```{r netother-dynamic, echo=FALSE}
+dx4 <- netdx(otherNetest, nsims = 5, nsteps = 5000,
+              nwstats.formula = ~edges + meandeg + concurrent + nodecov("age") + absdiff("sqrtage"),
+              set.control.ergm = control.simulate.ergm(MCMC.burnin = 1e6))
+
+saveRDS(dx4, "~/Documents/Dissertation/R/Duration/Setup/fits/dx-other-cov-dynamic.RDS")
+
+dx4 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/dx-other-cov-dynamic.RDS")
+ 
+dx4 
+
+plot(dx4, stats = c("edges", "meandeg", "nodecov.age", "absdiff.sqrtage"), plots.joined = FALSE)
+
+plot(dx4, type = "duration")
+plot(dx4, type = "dissolution", qnts.col = "orange2")
+```
+
+### Nodefactor(agecat)
+#### Static 
+```{r other-nodefactor, echo=FALSE}
+otherNetest2 <- ee.netest(fit.other, coef.diss)
+
+# Netdx, static
+dxstatic2 <- netdx(otherNetest2, nsims = 1e4, dynamic = FALSE,
+  nwstats.formula = ~edges + meandeg + concurrent)
+
+saveRDS(dxstatic2, "~/Documents/Dissertation/R/Duration/Setup/fits/dx-other-nodefactor.RDS")
+
+dxstatic2 <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/dx-other-nodefactor.RDS")
+               
+dxstatic2
+
+plot(dxstatic2, method = "b", stats = c("edges","concurrent"))
+```
+#### Dynamic
+```{r other-nodefactor-dynamic, echo=FALSE}
+dx_dyn <- netdx(otherNetest2, nsims = 5, nsteps = 5000,
+              nwstats.formula = ~edges + meandeg + concurrent + nodefactor("agecat", levels=c(1:3)) + absdiff("sqrtage"),
+             set.control.ergm = control.simulate.ergm(MCMC.burnin = 1e6))
+
+saveRDS(dx_dyn, "~/Documents/Dissertation/R/Duration/Setup/fits/dx-other-nodefactor-dynamic.RDS")
+
+dx_dyn <- readRDS("~/Documents/Dissertation/R/Duration/Setup/fits/dx-other-nodefactor-dynamic.RDS")
+ 
+dx_dyn
+
+plot(dx_dyn, stats = c("edges", "meandeg", "nodefactor.agecat.1", "nodefactor.agecat.2", "nodefactor.agecat.3", "absdiff.sqrtage"), plots.joined = FALSE)
+
+plot(dx_dyn, type = "duration")
+plot(dx_dyn, type = "dissolution", qnts.col = "orange2")
+```
+

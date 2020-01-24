@@ -1,0 +1,70 @@
+---
+title: "DurationModelParams"
+author: "Emily Pollock"
+date: "12/30/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(plotly)
+library(srvyr)
+library(reshape2)
+library(kableExtra)
+library(ergm.ego)
+#library(scales)
+#library(DataCombine)
+library(DT)
+```
+```{r load-data, echo=FALSE}
+nsfg <- readRDS("~/NSFG_DATA/Full/nsfg_complete.rds") 
+nsfg <- nsfg %>%
+  mutate(sex = as.factor(sex), 
+         age = as.factor(age), 
+         hadsex = as.factor(HADSEX),
+         ssany = as.factor(ifelse(SAMESEXANY==1, 1, 2)),
+         sexage = ifelse(agefsex <= 14, 14, 
+                  ifelse(agefsex > 14, agefsex, NA)),
+         sexage = replace_na(sexage, 100))
+
+
+svy <- as_survey_design(nsfg, weights = weight, ids = ego)
+```
+
+## Probability of Sexual Debut by Age  
+ - if HADSEX == yes, asked respondent when they debuted w/ OS partner
+ - slightly ammended dist below (14 = those who debuted before age 15, 100 = those who never debuted w/ OS)
+ - for model, simplify slightly, assume that prob of OS debut past age 32 for both males and females is 0.001
+ 
+```{r debut-by-age, echo=FALSE}
+# what we want is not the cumulative probabiltiy that someone in the population has debuted by a certain age, but instead the probability that a person debuts AT a certain age 
+
+debut_age <- svy %>% 
+          mutate(sexage = as.factor(sexage)) %>%
+          group_by(sex, sexage) %>% 
+          summarize(proportion = survey_mean()) %>%
+          mutate(proportion=round(proportion,3)) 
+
+pda <-ggplot(debut_age, aes(x=sexage, y=proportion, group=sex)) +
+          geom_line(aes(color=sex)) +
+          labs(title="Proportion Who Debuted w/ Opposite Sex at Certain Age")
+
+#ggplotly(pda) 
+
+debut_age2 <- debut_age %>% 
+  select(-proportion_se) %>%
+  spread(sex, proportion)
+
+datatable(debut_age2)
+```
+
+final params:  
+```{r debut-params-final, echo=FALSE}
+fem <- c(debut_age2$F[1:18], rep(0.001, 13))
+male <- c(debut_age2$M[1:18], rep(0.001, 13))
+debut <- matrix(c(fem,male), byrow=T, nrow=2)
+```
+
+ 
