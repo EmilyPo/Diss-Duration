@@ -730,12 +730,12 @@ mdeaths <- c(males[1]-males[2],
              males[5]-males[6],
              males[6]-males[7])
 
-f_death_rate <- fdeaths/100000
-m_death_rate <- mdeaths/100000
+f_death_rate <- round(fdeaths/females[-7], 4)
+m_death_rate <- round(mdeaths/males[-7],4)
 
 survivors <- data.frame(row.names=as.character(agecat), females[-7], males[-7], fdeaths, mdeaths, f_death_rate, m_death_rate)
 colnames(survivors) <- c("Survs, F", "Survs, M", "Deaths, F", "Deaths, M", "D Rate, F", "D Rate, M")
 
-datatable(survivors, caption="Survivors and Death Rates per 100,000 - 2017")
+datatable(survivors, caption="Survivors and Death Rates - 2017")
 ```
 

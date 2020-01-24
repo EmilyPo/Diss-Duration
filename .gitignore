@@ -8,3 +8,5 @@ Survival_Analysis/model_fits/survdat.rds
 Setup/fits
 
 *.png
+
+*.rds 
