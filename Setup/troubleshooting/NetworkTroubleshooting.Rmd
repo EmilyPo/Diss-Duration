@@ -15,8 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(ergm.ego)
 library(EpiModel)
 library(here)
-source("~/Documents/Dissertation/R/Duration/Functions/netest_conversion.R")
-source("~/Documents/Dissertation/R/Duration/Functions/finalEgodataPrep.R")
+source("~/Documents/Dissertation/R/Duration/Functions/newnetest.R") # convert ee object to netest 
+source("~/Documents/Dissertation/R/Duration/Functions/finalEgodataPrep.R") # generates the egodata objects
 setwd("~/Documents/Dissertation/R/Duration/Setup/troubleshooting")
 ```
 
@@ -25,125 +25,161 @@ setwd("~/Documents/Dissertation/R/Duration/Setup/troubleshooting")
 sessionInfo()
 ```
 
+# Pop Size
+this is an ongoing issue, for now using network size = sample size and ppop.wt = "sample"  
+pavel has some suggestions that I need to re-read and try to understand & implement.  
 
-## Dissolution Coefs Setup
-```{r diss-coefs}
-dissolution <- ~offset(edges)
-exitRate <- 0.000641 # 1/(30*52) rounded
-duration.marcoh <- 8.914 * 52
-duration.other <- 1.824 * 52
-dissolution_marcoh <- dissolution_coefs(dissolution = dissolution, duration = duration.marcoh, d.rate = exitRate)
-dissolution_other <- dissolution_coefs(dissolution = dissolution, duration = duration.other, d.rate = exitRate)
+ppize for $3∗sampleSize/smallestWeight$  
+```{r popsize, echo=FALSE}
+sampSize <- nrow(egodat_marcoh$egos)
+minWeight <- min(egodat_marcoh$egos$weight)
+
+ppopsize <- 3 * (sampSize/minWeight)
 ```
 
-## Edges Only - Marcoh  
+# Age Range  
+men and women aged 15:45  
+
+# Dissolution Coefs Setup
+```{r diss-coefs}
+time.step <- 7  
+dissolution <- ~offset(edges)
+
+exitRate <- 0.000641 # 1/(30*52) rounded THIS MAY BE WRONG
+
+duration.marcoh <- 8.914 * (365/time.step)
+duration.other <- 1.824 * (365/time.step)
+
+dissolution_marcoh <- dissolution_coefs(
+                        dissolution = dissolution, 
+                        duration = duration.marcoh, 
+                        d.rate = exitRate)
+
+dissolution_other <- dissolution_coefs(
+                        dissolution = dissolution, 
+                        duration = duration.other, 
+                        d.rate = exitRate)
+```
+
+# Using Ergm.Ego: Edges Only - Marcoh  
 
 sidebar: the function "ee.netest" that JKB developed has an error that only gets thrown when you use it on an edges-only model (the coef.hist doesn't get copied over correctly). I did some testing though and this doesn't seem to affect the netdx results.  
 
-testing a few things in the following netdx runs: first a network the with n=# of nsfg respondents, with ppopsize 10,000, and then testing several different exit rates  
+testing a few things in the following netdx runs: first a network the with n=# of nsfg respondents, and then testing several different exit rates. 
 
-### ppop size = # respondents 
+## w/ Original Exit Rate 
 ```{r eo-estimation, warning = F, comment = F, results='hide', fig.keep='all', message=F}
-eom <- ergm.ego(egodat_marcoh ~ edges)
+# estimate ergm.ego object 
+eeo <- ergm.ego(egodat_marcoh ~ edges, control = control.ergm.ego(ppop.wt = "sample"))
+# summary
+summary(eeo)
+# mcmc diagnostics
+mcmc.diagnostics(eeo)
+#gof 
+plot(gof(eeo))
 
-eom 
-mcmc.diagnostics(eom)
-plot(gof(eom))
+# convert object to netest object
+est <- new.netest(eeo, dissolution_marcoh)
+est
 
-#mNetest <- ee.netest(eom, dissolution_marcoh) # doesn't work b/c of coef.hist error 
-mNetest2 <- ee.netest.emily(eom, dissolution_marcoh)
+# static diagnostic
+dx.static <- netdx(est, nsims = 1e5, dynamic = FALSE)
+dx.static
+plot(dx.static)
 
-dx.m.static2 <- netdx(mNetest2, nsims = 1e4, dynamic = FALSE,
-                    nwstats.formula = ~edges)
-dx.m.static2
-plot(dx.m.static2, method = "b")
+# dynamic diagnostic (quick)
 
+#dx.dynamic <- netdx(est, nsims = 1, nsteps = 1e4, dynamic = T, set.control.ergm = control.simulate.ergm(MCMC.burnin = 1e5, MCMC.interval = 1e5))
+#saveRDS(dx.dynamic, here("Setup", "troubleshooting", "objects", "dx-m-dynamic.rds"))
 
-#dx.m.dynamic2 <- netdx(mNetest2, nsims = 5, nsteps = 10000,
-#                     nwstats.formula = ~edges)
-#saveRDS(dx.m.dynamic2, here("Setup", "troubleshooting", "objects", "dx-m-dynamic.rds"))
+dx.dynamic <- readRDS(here("Setup", "troubleshooting", "objects", "dx-m-dynamic.rds"))
 
-dx.m.dynamic2 <- readRDS(here("Setup", "troubleshooting", "objects", "dx-m-dynamic.rds"))
-
-dx.m.dynamic2
-plot(dx.m.dynamic2)
-plot(dx.m.dynamic2, type = "duration")
+dx.dynamic
+plot(dx.dynamic)
+plot(dx.dynamic, type = "duration")
 ```
 
-### ppop size = 10000
-```{r eo-estimation2, warning = F, comment = F, results='hide', fig.keep='all', message=F}
-eom10 <- ergm.ego(egodat_marcoh ~ edges, control = control.ergm.ego(ppopsize = 10000))
-
-eom10
-mcmc.diagnostics(eom10)
-plot(gof(eom10))
-
-mNetest10 <- ee.netest.emily(eom10, dissolution_marcoh)
-
-dx.m.static10 <- netdx(mNetest10, nsims = 1e4, dynamic = FALSE,
-                    nwstats.formula = ~edges)
-dx.m.static10
-plot(dx.m.static10, method = "b")
-
-#dx.m.dynamic10 <- netdx(mNetest10, nsims = 5, nsteps = 5000,
-#                     nwstats.formula = ~edges, 
-#                     set.control.ergm = control.simulate.ergm(MCMC.burnin=1e6, 
-#						            MCMC.interval=1e5))
-
-#saveRDS(dx.m.dynamic10, here("Setup", "troubleshooting", "objects", "dx-m-dynamic10.rds"))
-
-dx.m.dynamic10 <- readRDS(here("Setup", "troubleshooting", "objects", "dx-m-dynamic10.rds"))
-dx.m.dynamic10
-plot(dx.m.dynamic10)
-plot(dx.m.dynamic10, type = "duration")
-```
-
-### higher exit rate (aging out + mortality)  
-ppopsize = 10000  
+## w/ even higher exit rate (aging out + mortality)  
 ```{r high-exit}
+# new exit rate
 exit.high <- round(exitRate + 0.00667/52,5) # mean of yearly vital statistics (used in simulation parameters)
 exit.high
 dissolution_marcoh_high <- dissolution_coefs(dissolution = dissolution, d.rate = exit.high, duration = duration.marcoh)
 
-Mnetest_high <- ee.netest.emily(eom10, dissolution_marcoh_high)
+# convert to netest
+est_high <- new.netest(eeo, dissolution_marcoh_high)
 
-dx.m.static10high <- netdx(Mnetest_high, nsims = 1e4, dynamic = FALSE, nwstats.formula = ~edges)
-dx.m.static10high
-plot(dx.m.static10high)
-plot(dx.m.static10high, method = "b")
+# static diagnostic
+dx.static.high <- netdx(est_high, nsims = 1e4, dynamic = FALSE)
+dx.static.high
+plot(dx.static.high)
 
-#dx.m.dynamic10high <- netdx(Mnetest_high, nsims = 5, nsteps = 5000,
-#                      nwstats.formula = ~edges, 
-#                      set.control.ergm = control.simulate.ergm(MCMC.burnin=1e6, 
-#						          MCMC.interval=1e5))
+#dynamic diagnostic (quick)
+# dx.dynamic.high <- netdx(est_high, nsims = 1, nsteps = 5000, set.control.ergm = control.simulate.ergm(MCMC.burnin=1e5, MCMC.interval=1e5))
+# saveRDS(dx.dynamic.high, here("Setup", "troubleshooting", "objects", "dx.dynamic.high.rds"))
+dx.dynamic.high <- readRDS(here("Setup", "troubleshooting", "objects", "dx.dynamic.high.rds"))
 
-#saveRDS(dx.m.dynamic10high, here("Setup", "troubleshooting", "objects", "dx-m-dynamic10high.rds"))
-dx.m.dynamic10high <- readRDS(here("Setup", "troubleshooting", "objects", "dx-m-dynamic10high.rds"))
-dx.m.dynamic10high
-plot(dx.m.dynamic10high)
-plot(dx.m.dynamic10high, type = "duration")
+dx.dynamic.high
+plot(dx.dynamic.high)
+plot(dx.dynamic.high, type = "duration")
 ```
 
-### no exit  
+## no exit rate 
 
 ```{r no-exit, message=F}
+# dissolution params
 dissolution_marcoh_noexit <- dissolution_coefs(dissolution = dissolution, d.rate = 0, duration = duration.marcoh)
+# convert to netest
+est_noexit <- new.netest(eeo, dissolution_marcoh_noexit)
 
-Mnetest_noexit <- ee.netest.emily(eom10, dissolution_marcoh_noexit)
+# static diagnostics
+dx.static.noexit <- netdx(est_noexit, nsims = 1e4, dynamic = FALSE)
+dx.static.noexit 
+plot(dx.static.noexit)
 
-dx.m.static10noexit <- netdx(Mnetest_noexit, nsims = 1e4, dynamic = FALSE, nwstats.formula = ~edges)
-dx.m.static10noexit
-plot(dx.m.static10noexit)
-plot(dx.m.static10noexit, method = "b")
+# dynamic diagnostics (quick)
+#dx.dynamic.noexit <- netdx(est_noexit, nsims = 1, nsteps = 5000, set.control.ergm = control.simulate.ergm(MCMC.burnin=1e5, MCMC.interval=1e5))
+#saveRDS(dx.dynamic.noexit, here("Setup", "troubleshooting", "objects", "dx.dynamic.noexit.rds"))
 
-#dx.m.dynamic10noexit <- netdx(Mnetest_noexit, nsims = 5, nsteps = 5000,
-#                      nwstats.formula = ~edges, 
-#                      set.control.ergm = control.simulate.ergm(MCMC.burnin=1e6, #
-#						          MCMC.interval=1e5))
+dx.dynamic.noexit <- readRDS(here("Setup", "troubleshooting", "objects", "dx.dynamic.noexit.rds"))
+dx.dynamic.noexit
+plot(dx.dynamic.noexit)
+plot(dx.dynamic.noexit, type = "duration")
+```
 
-#saveRDS(dx.m.dynamic10noexit, here("Setup", "troubleshooting", "objects", "dx-m-dynamic10noexit.rds"))
-dx.m.dynamic10noexit <- readRDS(here("Setup", "troubleshooting", "objects", "dx-m-dynamic10noexit.rds"))
-dx.m.dynamic10noexit
-plot(dx.m.dynamic10noexit)
-plot(dx.m.dynamic10noexit, type = "duration")
+# Target Stats Approach - Marcoh  
+With Original Exit Rate - this works, when this dissolution w/ ergm.ego approach loses edges quickly  
+```{r targets, message=F}
+# nsfg sample size
+networksize <- eeo$ppopsize
+
+# initialize same size network
+net <- network.initialize(networksize, directed = FALSE)
+
+# target stat for edges
+edges.target <- est$target.stats
+
+# dissolution - use dissolution_marcoh
+
+# netest
+fit <- netest(net, 
+               formation = ~edges, 
+               target.stats = edges.target,
+               coef.diss = dissolution_marcoh)
+summary(fit)
+
+# static diagnostic
+target.static <- netdx(fit, nsims=1000, dynamic=F)
+target.static
+plot(target.static)
+
+# dynamic diagnostic
+#target.dynamic <- netdx(fit, nsteps=10000, nsims=5)
+#saveRDS(target.dynamic, here("Setup", "troubleshooting", "objects", "target-dynamic.rds"))
+
+target.dynamic <- readRDS(here("Setup", "troubleshooting", "objects", "target-dynamic.rds"))
+target.dynamic
+plot(target.dynamic)
+plot(target.dynamic, type = "duration")
+
 ```
